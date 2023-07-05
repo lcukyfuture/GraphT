@@ -20,9 +20,6 @@ class Attention(gnn.MessagePassing):
     dropout (float):        dropout value (default: 0.0)
     bias (bool):            whether layers have an additive bias (default: False)
     symmetric (bool):       whether K=Q in dot-product attention (default: False)
-    gnn_type (str):         GNN type to use in structure extractor. (see gnn_layers.py for options)
-    se (str):               type of structure extractor ("gnn", "khopgnn")
-    k_hop (int):            number of base GNN layers or the K hop size for khopgnn structure extractor (default=2).
     """
 
     def __init__(self, embed_dim, num_heads=8, dropout=0., bias=False,
