@@ -9,9 +9,10 @@ class GraphTransformerEncoder(nn.TransformerEncoder):
     def forward(self, x, num_nodes, edge_index, original_x=None, edge_attr=None,
             ptr=None, num_graphs=None, batch=None):
         output = x
+        original_x = torch.argmax(original_x, dim=1)
 
         for mod in self.layers:
-            output = mod(output, 
+            output, original_x = mod(output, 
                 num_nodes,
                 edge_index, 
                 original_x=original_x,
