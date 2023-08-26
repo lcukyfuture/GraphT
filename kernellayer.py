@@ -245,6 +245,7 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
         if batch_norm:
             self.norm1 = nn.BatchNorm1d(d_model)
             self.norm2 = nn.BatchNorm1d(d_model)
+        self.soft = nn.Softmax(dim=-1)
 
     def forward(self, x, 
             num_nodes,
@@ -279,7 +280,14 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
 
         if not self.pre_norm:
             x = self.norm2(x)
-        return x
+        # label = self.soft(x)
+        # original_x = torch.argmax(label, dim=-1)
+        temperature = 1
+        gumbel_noise = torch.rand_like(x)
+        gumbel_noise = -torch.log(-torch.log(gumbel_noise + 1e-20)+1e-20)
+        gumbel_logits = (x + gumbel_noise) / temperature
+        original_x = torch.argmax(self.soft(gumbel_logits),dim=-1)
+        return x, original_x
 
 
 def pad_batch(x, ptr, return_mask=False):
