@@ -1,0 +1,2 @@
+Best test acc for fold 10:0.7117
+Average test acc: 0.7349 +/- 0.0134
