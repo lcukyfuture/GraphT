@@ -19,3 +19,9 @@
 | MUTAG | 0.8781+/-0.0373<br>16850|0.8784+/-0.0372<br>44945s|0.8784+/-0.0349<br>44298s| 0.8833+/-0.0379<br>44945s|
 
 
+## GraphiT method test 
+SP MUTAG 0.8444 +/- 0.0233 9850s
+
+However, comparing with the GraphiT results, although our results for validation and test accuracy are not very bad, the train loss is still very high and it is difficult to reach near 0 case in GraphiT. And the validation loss curve stabilizes and does not move at the end.
+
+
