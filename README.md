@@ -18,10 +18,59 @@
 | :-----:| :------: | :------: | :----: | :---:|
 | MUTAG | 0.8781+/-0.0373<br>16850|0.8784+/-0.0372<br>44945s|0.8784+/-0.0349<br>44298s| 0.8833+/-0.0379<br>44945s|
 
+## MUTAG 2023/9/13 
+### Shortestpath kernel
+| Layers/Hops | 1 | 2 | 3 | 4 | 5 |
+| :-----:| :------: | :------: | :----: | :---:| :---:|
+| 1 | 0.8000 +/- 0.0439<br> 4674s|0.8111 +/- 0.0274<br>6038s | 0.8278 +/- 0.0228<br> 7995s| | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+| 6 | | | | | |
+
+### Graphlet kernel
+| Layers/Hops | 1 | 2 | 3 | 4 | 5 |
+| :-----:| :------: | :------: | :----: | :---:| :---:|
+| 1 | | | | | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+| 6 | | | | | |
+
+### WLSP
+| Layers/Hops | 1 | 2 | 3 | 4 | 5 |
+| :-----:| :------: | :------: | :----: | :---:| :---:|
+| 1 | | | | | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+| 6 | | | | | |
+
+### WL_GPU
+| Layers/Hops | 1 | 2 | 3 | 4 | 5 |
+| :-----:| :------: | :------: | :----: | :---:| :---:|
+| 1 | | | | | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+| 6 | | | | | |
 
 ## GraphiT method test 
 SP MUTAG 0.8444 +/- 0.0233 9850s
 
+SP PTC 0.6059 +/- 0.0217 10845s
+
 However, comparing with the GraphiT results, although our results for validation and test accuracy are not very bad, the train loss is still very high and it is difficult to reach near 0 case in GraphiT. And the validation loss curve stabilizes and does not move at the end.
 
 
+## Update 2023/9/13
+1. Do all the experiments on MUTAG, and create tables.
+2. Using faster kernel.
+3. Early stop
+4. Trying different attentions.
+5. Positional encoding
+6. Multi head attention
