@@ -68,7 +68,7 @@ However, comparing with the GraphiT results, although our results for validation
 
 
 ## Update 2023/9/13
-1. Do all the experiments on MUTAG, and create tables.
+1. Do all the experiments on MUTAG, and create tables.  :fast_forward:
 2. Using faster kernel.
 3. Early stop
 4. Trying different attentions.
