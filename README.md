@@ -2,7 +2,13 @@
 
 ## K-Fold only use train sets and validation sets
  The MUTAG dataset was used with 10-fold cross-validation. Using the method in sklearn, random_state is fixed to 1. The highest validation accuracy is extracted from each fold as the accuracy of that fold, and finally the model's accuracy is calculated by averaging.
-
+## Update 2023/9/13
+1. Do all the experiments on MUTAG, and create tables.  :fast_forward:
+2. Using faster kernel. :fast_forward: 
+3. Early stop
+4. Trying different attentions.
+5. Positional encoding
+6. Multi head attention
 ### 1 Layer 2 Hops Subgraph Accuracy
 |  | SP | WL | WLSP | Graphlet_3 |
 | :-----:| :------: | :------: | :----: | :---:|
@@ -67,10 +73,3 @@ SP PTC 0.6059 +/- 0.0217 10845s
 However, comparing with the GraphiT results, although our results for validation and test accuracy are not very bad, the train loss is still very high and it is difficult to reach near 0 case in GraphiT. And the validation loss curve stabilizes and does not move at the end.
 
 
-## Update 2023/9/13
-1. Do all the experiments on MUTAG, and create tables.  :fast_forward:
-2. Using faster kernel.
-3. Early stop
-4. Trying different attentions.
-5. Positional encoding
-6. Multi head attention
