@@ -437,6 +437,7 @@ def extract_kernel_features(data, label, kernel_type,num_hops):
         batch_subdata = Batch.from_data_list(subgraph)
         # print("batched_data.x.shape:", batch_subdata.x.shape)
         X = batch_subdata.x.to(device)
+        print(X)
         E = batch_subdata.edge_index.to(device)
         B = batch_subdata.batch.to(device)
         wl = WL(num_layers=3)
