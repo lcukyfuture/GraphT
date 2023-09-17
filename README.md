@@ -26,6 +26,7 @@
 
 ## MUTAG 2023/9/13 
 ### Shortestpath kernel
+**Bold plus italic is the highest accuracy, bold is the second highest, and italic is the third highest.**
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
 | 1 | 0.8000 +/- 0.0439<br> 4674s|0.8111 +/- 0.0274<br>6038s | 0.8278 +/- 0.0228<br> 7995s| 0.7944 +/- 0.0377<br>10348s|0.7944 +/- 0.0334<br>12488s |
