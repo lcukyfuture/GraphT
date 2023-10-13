@@ -74,6 +74,12 @@ sample 3 nodes graphlets
 ## NCI1
 
 ### WL_GPU Parallel and precomputing
+batch_size = 64
+
+LR:0.001  StepLR(optimizer, step_size=25, gamma=0.5)
+
+epochs:300 and get the best model from the last 50 epochs with the highest validation accuracy.
+
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
 | 1 | | | | | |
@@ -85,6 +91,13 @@ sample 3 nodes graphlets
 
 
 ## PROTEINS
+batch_size = 32
+
+LR:0.001  StepLR(optimizer, step_size=25, gamma=0.5)
+
+epochs:300 and get the best model from the last 50 epochs with the highest validation accuracy.
+
+
 ### WL_GPU Parallel and precomputing
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
