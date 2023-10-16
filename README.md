@@ -125,7 +125,7 @@ epochs:300 and get the best model from the last 50 epochs with the highest valid
 | 6 |0.6783+/-0.0142<br>13052s |0.6540+/-0.0127<br>22849s | | | |
 
 
-## PROTEINS(k=3)
+## PROTEINS
 batch_size = 32
 
 LR:0.001  StepLR(optimizer, step_size=25, gamma=0.5)
@@ -133,7 +133,7 @@ LR:0.001  StepLR(optimizer, step_size=25, gamma=0.5)
 epochs:300 and get the best model from the last 50 epochs with the highest validation accuracy.
 
 
-### WL_GPU Parallel and precomputing
+### WL_GPU Parallel and precomputing(k=3)
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
 | 1 |0.7468+/-0.0120<br>6762s |0.7459+/-0.0118<br>30317s | | | |
@@ -142,7 +142,7 @@ epochs:300 and get the best model from the last 50 epochs with the highest valid
 | 4 |0.7414+/-0.0113<br>7300s | | | | |
 | 5 |0.7450+/-0.0110<br>7625s | | | | |
 | 6 |0.7468+/-0.0115<br>8003s | | | | |
-### WL_GPU Parallel and precomputing
+### WL_GPU Parallel and precomputing(batch_size=16, k=3)
 batch_size = 16
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
