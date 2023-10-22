@@ -162,10 +162,14 @@ batch_size = 16
 | 4 | | | | | |
 | 5 | | | | | |
 | 6 | | | | | |
+
 SP MUTAG 0.8444 +/- 0.0233 9850s
 
 SP PTC 0.6059 +/- 0.0217 10845s
 
 However, comparing with the GraphiT results, although our results for validation and test accuracy are not very bad, the train loss is still very high and it is difficult to reach near 0 case in GraphiT. And the validation loss curve stabilizes and does not move at the end.
 
+
+## WL_GPU document
+The WL_GPU is split into two classes: WL_Conv and WL. WL_Conv focuses on the individual WL convolutional operations. WL oversees the complete multi_layer WL hashing process. Here are a few differences from the CPU-based approach (GraKeL) to improve computing performance. In each iteration of the WL method, we batch process the dataset, which has been implemented in the dataloader during model training. We count the number of different labels or colors in each subgraph and extract color histograms. Then, for each subgraph node, aggregate the labels of its neighbors by torch_scatter, which is a way to sum over neighbors' features efficiently. After aggregating the neighbor labels, a new label or "hash code" is assigned to the node based on its current and aggregated labels. This is a numeric encoding of both its original feature and its local neighborhood structure. This relabeling is done through vector operations and normalization rather than typical string-based hashing in a CPU-based method. After several iterations, the labels of the subgraph nodes are used to generate histograms for the whole subgraph. These histograms extract the frequency of each label(color) in the subgraph and can be seen as a feature vector representing the subgraph's structure. By comparing the histograms of different subgraphs extracted from one node with the k-hop subgraph, we can determine how structurally similar the nodes are. These operations are based on batch, using the GPU core. Although the CPU approach also allows for parallelism, the GPU is superior from both a memory and computational standpoint.
 
