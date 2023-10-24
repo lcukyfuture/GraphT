@@ -152,8 +152,8 @@ batch_size = 16
 | 4 |0.7396+/-0.0136<br>9138s |0.7477+/-0.0132<br>23578s | | | |
 | 5 |0.7432+/-0.0116<br>9816s |0.7477+/-0.0123<br>24318s | | | |
 | 6 |0.7387+/-0.0122<br>10500s |0.7333+/-0.0151<br>24943s | | | |
-## GraphiT method test 
-### Reuslt template
+
+## Reuslt template
 | Layers/Hops | 1 | 2 | 3 | 4 | 5 |
 | :-----:| :------: | :------: | :----: | :---:| :---:|
 | 1 | | | | | |
@@ -163,11 +163,6 @@ batch_size = 16
 | 5 | | | | | |
 | 6 | | | | | |
 
-SP MUTAG 0.8444 +/- 0.0233 9850s
-
-SP PTC 0.6059 +/- 0.0217 10845s
-
-However, comparing with the GraphiT results, although our results for validation and test accuracy are not very bad, the train loss is still very high and it is difficult to reach near 0 case in GraphiT. And the validation loss curve stabilizes and does not move at the end.
 
 
 ## WL_GPU document
