@@ -240,7 +240,7 @@ batch_size = 16
 
 ## Heatmap
 ### MUTAG
-![Graph1_1hop_WL3](Figures\MUTAG\Graph1_WL3.png)![Graph1_2hop_WL3](Figures\MUTAG\Graph1_2hopWL3.png)![Graph1_3hop_WL3](Figures\MUTAG\Graph1_3hopWL3.png)![Graph1_4hop_WL3](Figures\MUTAG\Graph1_4hopWL3.png)![Graph1_5hop_WL3](Figures\MUTAG\Graph1_5hopWL3.png)
+![Graph1_1hop_WL3](Figures/MUTAG/Graph1_WL3.png)![Graph1_2hop_WL3](Figures/MUTAG/Graph1_2hopWL3.png)![Graph1_3hop_WL3](Figures/MUTAG/Graph1_3hopWL3.png)![Graph1_4hop_WL3](Figures/MUTAG/Graph1_4hopWL3.png)![Graph1_5hop_WL3](Figures/MUTAG/Graph1_5hopWL3.png)
 
 
 
