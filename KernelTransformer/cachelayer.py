@@ -4,11 +4,12 @@ os.environ["PATH"] = os.environ["PATH"]+":/usr/local/cuda/bin/"
 import torch
 import numpy as np
 from torch import nn
+import torch.nn.functional as F
 from torch_geometric.nn.aggr import Aggregation
 from torch_scatter import scatter_add, scatter_mean, scatter_max
 import torch_geometric.nn as gnn
 import torch_geometric.utils as utils
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 from einops import rearrange
 import torch.nn.functional as F
 from grakel.kernels import RandomWalk, ShortestPath, CoreFramework, WeisfeilerLehman, GraphletSampling, VertexHistogram
@@ -20,8 +21,15 @@ from grakel.kernels import RandomWalk, ShortestPath, CoreFramework, WeisfeilerLe
 #     KroneckerDelta,
 #     Constant
 # )
+import sys
+sys.path.append('./src')
+from WL_gpu import WL
 from torch_geometric.utils import to_networkx
 from grakel.utils import graph_from_networkx
+from time import time as gettime
+kernel_type= [
+    'RW', 'ShortestPath', 'WL', 'WLSP', 'GL', 'WL_GPU'
+]
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class Attention(gnn.MessagePassing):
@@ -48,7 +56,6 @@ class Attention(gnn.MessagePassing):
 
         self.num_heads = num_heads
         self.scale = head_dim ** -0.5
-
         self.attend = nn.Softmax(dim=-1)
 
         self.symmetric = symmetric
@@ -57,6 +64,8 @@ class Attention(gnn.MessagePassing):
         else:
             self.to_qk = nn.Linear(embed_dim, embed_dim * 2, bias=bias)
         self.to_v = nn.Linear(embed_dim, embed_dim, bias=bias)
+
+        self.to_atten = nn.Linear(embed_dim, embed_dim, bias=bias)
 
         self.attn_dropout = nn.Dropout(dropout)
 
@@ -168,54 +177,112 @@ class KernelAttention(gnn.MessagePassing):
         self.out_proj = nn.Linear(embed_dim, embed_dim)
         self._reset_parameters()
         self.attn_sum = None
+        self.kernel_cache = None
 
     def _reset_parameters(self):
         nn.init.xavier_uniform_(self.to_v.weight)
 
         if self.bias:
             nn.init.constant_(self.to_v.bias, 0.)
-
     def forward(self,
             x,
             edge_index,
             original_x = None,
+            subgraph_node_index = None,
+            subgraph_edge_index  = None,
+            subgraph_indicator = None,
             edge_attr=None,
             ptr=None,
             num_graphs=None,
-            batch = None
+            batch = None,
+            attn_weight=None,
+            kernel_type=None,
+            num_hops=None,
+            precomputed_kernel=None
             ):
-        total_nodes = 0
-        row, col = edge_index
-        batch_edge = batch[row]
-        output = []
-        max_length = 0
-        for graph_index in range(num_graphs):
-            ###not using the original graph node label.
-            # single_x = x[batch == graph_index]
-            ###use the original graph node label.
-            single_x = original_x[batch == graph_index]
-            sinlge_row = row[batch_edge == graph_index]-total_nodes
-            single_col = col[batch_edge == graph_index]-total_nodes
-            single_edge_index = torch.stack((sinlge_row, single_col))
-            if edge_attr is not None:
-                single_edge_attr = edge_attr[batch_edge == graph_index]
-                single_data = Data(single_x, single_edge_index, single_edge_attr)
+        if attn_weight is None:
+            if kernel_type == 'WL_GPU':
+                if precomputed_kernel is not None:
+                    sub_kernels = precomputed_kernel
+                else:
+                    print('comput kernel')
+                    num_nodes = torch.diff(ptr).tolist()
+                    X = original_x[subgraph_node_index].to(device)
+                    E = subgraph_edge_index
+                    B = subgraph_indicator
+                    wl = WL(3)
+                    wl.fit((X,E,B))
+                    kernel_out = wl.transform((X,E,B))
+                    start_idx = 0
+                    sub_kernels = []
+                    for num in num_nodes:
+                        sub_kernels.append(kernel_out[start_idx:start_idx+num, start_idx:start_idx+num])
+                        start_idx += num
+                
+                # Using each sub-kernel for the attention mechanism
+                v = self.to_v(x)
+                out_list = []
+                for idx, sub_kernel in enumerate(sub_kernels):
+                    out = torch.matmul(sub_kernel, v[ptr[idx]:ptr[idx+1]])
+                    out_list.append(out)
+                
+                out = torch.cat(out_list, dim=0)
+                return self.out_proj(out), sub_kernels
             else:
-                single_data = Data(single_x, single_edge_index)
-            total_nodes = total_nodes + single_data.num_nodes
-            output.extend(extract_kernel_features(single_data))
-        # print(output)
-        max_length = max(max_length, max(len(x) for x in output))
-        output = pad_sequence(output, max_length)
-        output = torch.stack(output)
-        new_output = pad_batch(output, ptr)
-        v = self.to_v(x)
-        v = pad_batch(v, ptr)
-        out = torch.matmul(new_output, v)
-        out = unpad_batch(out, ptr)
-        out = self.out_proj(out)
-        return out
+                total_nodes = 0
+                row, col = edge_index
+                batch_edge = batch[row]
+                output = []
+                max_length = 0
+                for graph_index in range(num_graphs):
+                    ###not using the original graph node label.
+                    # single_x = x[batch == graph_index]
+                    ###use the original graph node label.
+                    new_time = gettime()
+                    single_x = original_x[batch == graph_index]
+                    sinlge_row = row[batch_edge == graph_index]-total_nodes
+                    single_col = col[batch_edge == graph_index]-total_nodes
+                    single_edge_index = torch.stack((sinlge_row, single_col))
+                    if edge_attr is not None:
+                        single_edge_attr = edge_attr[batch_edge == graph_index]
+                        single_data = Data(single_x, single_edge_index, single_edge_attr)
+                    else:
+                        single_data = Data(single_x, single_edge_index)
+                    total_nodes = total_nodes + single_data.num_nodes
+                    # output.extend(extract_kernel_features(single_data))
+                    
+                    output.extend(extract_kernel_features(single_data, original_x, kernel_type, num_hops))
+                    newend_time = gettime()
+                    print(f"{graph_index}kerneltime", (newend_time-new_time))
+                # print(output)
+                max_length = max(max_length, max(len(x) for x in output))
+                output = pad_sequence(output, max_length)
+                output = torch.stack(output)
+                new_output = pad_batch(output, ptr)
 
+                v = self.to_v(x)
+                v = pad_batch(v, ptr)
+                out = self.attn_sum
+                out = torch.matmul(new_output, v)
+                out = unpad_batch(out, ptr)
+                out = self.out_proj(out)
+                return out, new_output
+        else:
+            if kernel_type == 'WL_GPU':
+                v = self.to_v(x)
+                out_list = []
+                for idx, sub_kernel in enumerate(attn_weight):
+                    out = torch.matmul(sub_kernel, v[ptr[idx]:ptr[idx+1]])
+                    out_list.append(out)
+                out = torch.cat(out_list, dim=0)
+                return self.out_proj(out), None
+            else:
+                v = self.to_v(x)
+                v = pad_batch(v, ptr)
+                out = torch.matmul(attn_weight, v)
+                out = unpad_batch(out, ptr)
+                out = self.out_proj(out)
+                return out, None
 class TransformerEncoderLayer(nn.TransformerEncoderLayer):
     r"""Structure-Aware Transformer layer, made up of structure-aware self-attention and feed-forward network.
 
@@ -229,10 +296,6 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
             ("relu" or "gelu") or a unary callable (default: relu).
         batch_norm:         use batch normalization instead of layer normalization (default: True).
         pre_norm:           pre-normalization or post-normalization (default=False).
-        gnn_type:           base GNN model to extract subgraph representations.
-                            One can implememnt customized GNN in gnn_layers.py (default: gcn).
-        se:                 structure extractor to use, either gnn or khopgnn (default: gnn).
-        k_hop:              the number of base GNN layers or the K hop size for khopgnn structure extractor (default=2).
     """
     def __init__(self, d_model, dim_feedforward=512, dropout=0.1,
                 activation="relu", batch_norm=True, pre_norm=False, **kwargs):
@@ -246,30 +309,44 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
             self.norm1 = nn.BatchNorm1d(d_model)
             self.norm2 = nn.BatchNorm1d(d_model)
         self.soft = nn.Softmax(dim=-1)
-
     def forward(self, x, 
             num_nodes,
             edge_index,
             original_x=None,
+            subgraph_node_index=None,
+            subgraph_edge_index=None,
+            subgraph_indicator=None,
             edge_attr=None,
             ptr=None,
             num_graphs = None,
-            batch=None
+            batch=None,
+            attn_weight=None,
+            kernel_type=None,
+            num_hops=None,
+            precomputed_kernel=None,
         ):
-
+        # new_time = gettime()
         if self.pre_norm:
             x = self.norm1(x)
-
-        x2 = self.self_attn(
+        x2, attn_weight = self.self_attn(
             x,
             edge_index,
             original_x=original_x,
+            subgraph_node_index=subgraph_node_index,
+            subgraph_edge_index=subgraph_edge_index,
+            subgraph_indicator=subgraph_indicator,
             edge_attr = edge_attr,
             ptr=ptr,
             num_graphs=num_graphs,
-            batch=batch
+            batch=batch,
+            attn_weight=attn_weight,
+            kernel_type = kernel_type,
+            num_hops=num_hops,
+            precomputed_kernel=precomputed_kernel
         )
-
+        # end_time = gettime()
+        # time = end_time - new_time
+        # print("attention time", time)
         x = x + self.dropout1(x2)
         if self.pre_norm:
             x = self.norm2(x)
@@ -280,16 +357,44 @@ class TransformerEncoderLayer(nn.TransformerEncoderLayer):
 
         if not self.pre_norm:
             x = self.norm2(x)
+        # print(x.shape)
         # label = self.soft(x)
         # original_x = torch.argmax(label, dim=-1)
-        temperature = 1
-        gumbel_noise = torch.rand_like(x)
-        gumbel_noise = -torch.log(-torch.log(gumbel_noise + 1e-20)+1e-20)
-        gumbel_logits = (x + gumbel_noise) / temperature
-        original_x = torch.argmax(self.soft(gumbel_logits),dim=-1)
-        return x, original_x
+        ##gumbel softmax
+        # temperature = 1
+        # gumbel_noise = torch.rand_like(x).to(device)
+        # gumbel_noise = -torch.log(-torch.log(gumbel_noise + 1e-20)+1e-20)
+        # gumbel_logits = (x + gumbel_noise) / temperature
+        # gumbel_softmax = F.softmax(gumbel_logits, dim=-1)
+        # # print(gumbel_softmax.shape)
+        # shape = gumbel_softmax.size()
+        # _, ind = gumbel_softmax.max(dim=-1)
+        # x_hard = torch.zeros_like(x).view(-1, shape[-1])
+        # x_hard.scatter_(1, ind.view(-1, 1), 1)
+        # x_hard = x_hard.view(*shape)
+        # original_x = torch.argmax(x_hard,dim=-1)
+        # # print(original_x.shape)
+        # x_joke = torch.zeros_like(x_hard)
+        # x_joke[:,0] = original_x
+        # x_hard = x_joke.clone().requires_grad_(True)
+        # # print("x_hard", x_hard.shape)
+        # # print("original_x", original_x.shape)
+        # x_hard = (x_hard - gumbel_softmax).detach() + gumbel_softmax 
+        #return x, x_hard[:, 0]
+
+        return x, attn_weight
+
+# def sample_gumbel(shape, eps=1e-20):
+#     U = torch.rand(shape).to(device)
+#     return -torch.log(-torch.log(U + eps) + eps)
+
+# def gumbel_softmax(logits, temperature):
+#     y = logits + sample_gumbel(logits.size())
+#     y = F.softmax(y / temperature, dim=-1)
+#     shape = y.size()
 
 
+    
 def pad_batch(x, ptr, return_mask=False):
     bsz = len(ptr) - 1
     # num_nodes = torch.diff(ptr)
@@ -345,40 +450,81 @@ def unpad_batch(x, ptr):
             new_x[num_nodes + i] = x[i][-1]
     return new_x
 
-def extract_kernel_features(data):
+def extract_kernel_features(data, label, kernel_type,num_hops):
     subgraph_networkx = []
-    # gk = RandomWalk(normalize=True, method_type="fast", kernel_type="geometric")
-    # gk = ShortestPath(n_jobs = 8, normalize=True, with_labels = True)
-    gk = WeisfeilerLehman(n_jobs = 8, normalize=True)
-    # gk = GraphletSampling(n_jobs=8, normalize=True, k=3)
-    ###GPU accelerated kernel
+    # print(kernel_type)
+    # print("hops", num_hops)
+    if kernel_type == 'SP':
+        gk = ShortestPath(n_jobs = 8, normalize=True, with_labels = True)
+    elif kernel_type == 'RW':
+        gk = RandomWalk(n_jobs=32,normalize=True, method_type="fast", kernel_type="geometric")
+    elif kernel_type == 'WL':
+        gk = WeisfeilerLehman(n_jobs = 32, normalize=True)
+    elif kernel_type == 'WLSP':
+        gk = WeisfeilerLehman(n_jobs = 32, normalize=True, base_graph_kernel=ShortestPath)
+    elif kernel_type == 'GL':
+        gk = GraphletSampling(n_jobs=32, normalize=True, k=2)
+    else:
+        gk = 'WL_GPU'
     # knode = TensorProduct(radius=SquareExponential(0.5),
     #                       catergory=KroneckerDelta(0.5))
     # kedge = Constant(1.0)
     # mlgk = MarginalizedGraphKernel(knode, kedge, q=0.05)
-    nodes_indices = 0
-    for node_index in range(nodes_indices + data.num_nodes):
-        sub_node, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(node_idx=node_index, 
-                                                                    num_hops=2, 
-                                                                    edge_index=data.edge_index, 
-                                                                    relabel_nodes=True)
-        x = data.x[sub_node]
-        decoded_labels = torch.argmax(x, dim=1).tolist()
-        subdata = Data(x, edge_index=sub_edge_index)
-        subdata['label'] = decoded_labels
-        subdata_networkx = to_networkx(subdata, node_attrs=['label'])
-        # nx.draw(subdata_networkx)
-        # plt.show()
-        subgraph_networkx.append(subdata_networkx)
+    if gk == 'WL_GPU':
+        print(data)
+        X = data.x[data.subgraph_node_index].argmax(-1).to(device)
+        E = data.subgraph_edge_index.to(device)
+        B = data.subgraph_indicator.to(device)
+        wl = WL(5)
+        wl.fit((X, E, B))
+        kernel_out = wl.transform((X, E, B))
+        print(kernel_out)
+        # nodes_indices = 0
+        # subgraph = []
+        # for node_index in range(nodes_indices + data.num_nodes):
+        #     sub_node, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(node_idx=node_index, 
+        #                                                                 num_hops=num_hops, 
+        #                                                                 edge_index=data.edge_index, 
+        #                                                                 relabel_nodes=True)
+        #     x = data.x[sub_node]
+        #     # print("sub_node.shape:", sub_node.shape)
+        #     # print("x.shape:", x.shape)      
+        #     # decoded_labels = torch.argmax(x, dim=1).tolist()
+        #     subdata = Data(x, edge_index=sub_edge_index)
+        #     subgraph.append(subdata)
+        # # new_time = gettime()  
+        # batch_subdata = Batch.from_data_list(subgraph)
+        # # print("batched_data.x.shape:", batch_subdata.x.shape)
+        # X = batch_subdata.x.to(device)
+        # E = batch_subdata.edge_index.to(device)
+        # B = batch_subdata.batch.to(device)
+        # wl = WL(num_layers=5)
+        # wl.fit((X, E, B))
+        # kernel_out = wl.transform((X, E, B))
+    else:
+        nodes_indices = 0
+        for node_index in range(nodes_indices + data.num_nodes):
+            sub_node, sub_edge_index, _, edge_mask = utils.k_hop_subgraph(node_idx=node_index, 
+                                                                        num_hops=num_hops, 
+                                                                        edge_index=data.edge_index, 
+                                                                        relabel_nodes=True)
+            x = data.x[sub_node]
+            # decoded_labels = torch.argmax(x, dim=1).tolist()
+            subdata = Data(x, edge_index=sub_edge_index)
+            subdata['label'] = label
+            subdata_networkx = to_networkx(subdata, node_attrs=['label'])
+            # nx.draw(subdata_networkx)
+            # plt.show()
+            subgraph_networkx.append(subdata_networkx)
 
-    nodes_indices = nodes_indices + data.num_nodes
-    ###GPU accelerated kernel data transform
-    # R = mlgk([Graph.from_networkx(g) for g in subgraph_networkx])
-    # d = np.diag(R)**-0.5
-    # K = np.diag(d).dot(R).dot(np.diag(d))
-    # kernel_out = K
-    grakel_data = graph_from_networkx(subgraph_networkx, node_labels_tag='label')
-    kernel_out = gk.fit_transform(grakel_data)
+        nodes_indices = nodes_indices + data.num_nodes
+        ###GPU accelerated kernel data transform
+        # R = mlgk([Graph.from_networkx(g) for g in subgraph_networkx])
+        # d = np.diag(R)**-0.5
+        # K = np.diag(d).dot(R).dot(np.diag(d))
+        # kernel_out = K
+        grakel_data = graph_from_networkx(subgraph_networkx, node_labels_tag='label')
+        kernel_out = gk.fit_transform(grakel_data)
     return torch.Tensor(kernel_out).to(device)
 
 def pad_sequence(seq, max_length):
