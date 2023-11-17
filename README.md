@@ -9,6 +9,18 @@
 4. Trying different attentions.
 5. Positional encoding
 6. Multi head attention
+## Grid Search Result
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
+| :-----:| :------: | :------: | :----: | :---:|
+| Ours |87.8+/-6.5 |59.41+/-8.6 |75.3+/-3.8 | | |
+| GraphiT| | | | | 
+| DGCNN | | | | | |
+| DiffPool | | | | | 
+| ECC | | | | | |
+| GIN | | | | | |
+| GraphSAGE | | | | |
+
+
 
 ## MUTAG 2023/9/13 
 <font color=Yellow>Bold plus italic is the highest accuracy, bold is the second highest, and italic is the third highest.</font>

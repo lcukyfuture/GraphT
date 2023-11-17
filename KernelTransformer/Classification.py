@@ -21,7 +21,6 @@ import copy
 from data_idx import GraphDataset
 from utils import compute_kernel_for_batch
 import hashlib
-
 def load_args():
     parser = argparse.ArgumentParser(description='Graph Kernel Transformer Training', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -39,7 +38,7 @@ def load_args():
     parser.add_argument('--batch_size', type=int, default=32, help='training batch_size')
     parser.add_argument('--dropout', type=float, default=0, choices=[0, 0.1, 0.2])
     parser.add_argument('--outdir', type=str, default='',help='output path')
-    parser.add_argument('--iteration', type=int, default=3, help='WL_kernel iteration')
+    parser.add_argument('--wl', type=int, default=3, help='WL_GPU iteration')
     args = parser.parse_args()
     
     if args.outdir != '':
@@ -52,7 +51,7 @@ def load_args():
         outdir = os.path.join(outdir,'fold_{}'.format(args.fold))
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        outdir = outdir + '/{}_{}_{}_{}_{}_{}_{}'.format(args.kernel, args.iteration,args.num_layers, args.hop, args.dropout, args.lr, args.batch_size)
+        outdir = outdir + '/{}_{}_{}_{}_{}_{}_{}'.format(args.kernel, args.wl, args.num_layers, args.hop, args.dropout, args.lr, args.batch_size)
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
@@ -69,6 +68,7 @@ def save_kernel_to_cache(batch_data, kernels):
     for i, kernel in enumerate(kernels):
         graph_idx = batch_data[i].idx[0]
         kernel_cache[graph_idx] = kernel
+    
 
 def load_kernel_cache(batch_data):
     kernels = []
@@ -79,7 +79,7 @@ def load_kernel_cache(batch_data):
     return kernels
 
 def compute_and_cache_kernel_for_batch(batch_data):
-    kernels = compute_kernel_for_batch(batch_data, device, args.iteration)
+    kernels = compute_kernel_for_batch(batch_data, device, args.wl)
     save_kernel_to_cache(batch_data, kernels)
 
 def precompute_and_cache_kernels(loader):
@@ -142,7 +142,7 @@ def val(loader, model, criterion):
             print("error")
         size = len(data.y)
         data = data.to(device)
-        out = model(data, None)
+        out = model(data, kernel)
         loss = criterion(out, data.y)
         val_loss += loss.item()*size
         val_nums += size
@@ -198,11 +198,10 @@ def main():
     val_acc_list = []
     train_loss_list = []
     val_loss_list = []
-    best_acc = 0
     # csv_file = open(f'{args.kernel}{args.num_layers}layer{args.hop}hops{args.dropout}dropout_figs/{args.kernel}{args.num_layers}layer{args.hop}hops_results.csv', 'w', newline='')
     csv_file = open(args.outdir + '/results.csv', 'w', newline='')
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(['Fold', 'Epoch', 'Train Loss', 'Train Accuracy', 'Test Loss', 'Test Accuracy', 'Best Epoch','Best Accuracy'])
+    csv_writer.writerow(['Epoch', 'Train Loss', 'Train Accuracy', 'Test Loss', 'Test Accuracy', 'Best Epoch','Best Accuracy'])
 
 
     # kf = KFold(n_splits=5, shuffle=True, random_state=1)
@@ -211,7 +210,6 @@ def main():
     # best_accs = []
     idx_path = 'datasets/{}/inner_folds/{}-{}-{}.txt'
     test_idx_path = 'datasets/{}/test_idx-{}.txt'
-                        
     inner_idx = 1
 
     train_fold_idx = torch.from_numpy(np.loadtxt(
@@ -257,10 +255,9 @@ def main():
     # print(model.parameters)
     warm_up = 10
     weight_decay = 1e-4
-    lr = args.lr
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr , weight_decay = weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr , weight_decay = weight_decay)
     criterion = nn.CrossEntropyLoss()
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs-warm_up)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs-warm_up)
     # lr_steps = lr / (warm_up * len(train_dataloader))
     # def warmup_lr_scheduler(s):
     #     lr = s * lr_steps
@@ -274,7 +271,7 @@ def main():
     #         lr = decay_factor * s ** -.5
     #     return lr
 
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.5)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
 
     for epoch in range(args.epochs):
 
@@ -282,8 +279,7 @@ def main():
         # train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, warmup_lr_scheduler, epoch)
         train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
         val_loss, val_acc = val(val_dataloader, model, criterion)
-        if epoch >= warm_up:
-            lr_scheduler.step()
+        lr_scheduler.step()
         if best_acc < val_acc and epoch > 250:
             best_acc = val_acc
             best_epoch = epoch

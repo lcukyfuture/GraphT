@@ -1,6 +1,6 @@
 
 # Define fixed hyperparameters
-DATASET="MUTAG"
+DATASET="PTC_MR"
 KERNEL="WL_GPU" # You can change this as needed
 DIM_HIDDEN=64
 EPOCHS=300
@@ -28,7 +28,7 @@ for FOLD in "${FOLDS[@]}"; do
                 for LAYER in "${LAYERS[@]}"; do
                     for HOP in "${HOPS[@]}"; do
                         echo "Running Classification.py with batch_size=$BATCH_SIZE, dropout=$DROPOUT, num_layers=$LAYER"
-                        python Classification.py --dataset $DATASET --fold $FOLD --num-layers $LAYER --hop $HOP --kernel $KERNEL --fold $FOLD --dim_hidden $DIM_HIDDEN --epochs $EPOCHS --lr $LR --batch_size $BATCH_SIZE --dropout $DROPOUT --outdir $OUTPUT_DIR --iteration $ITERATION
+                        python Classification.py --dataset $DATASET --fold $FOLD --num-layers $LAYER --hop $HOP --kernel $KERNEL --fold $FOLD --dim_hidden $DIM_HIDDEN --epochs $EPOCHS --lr $LR --batch_size $BATCH_SIZE --dropout $DROPOUT --outdir $OUTPUT_DIR --wl $ITERATION
                     done
                 done
             done
