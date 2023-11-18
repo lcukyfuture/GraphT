@@ -13,12 +13,14 @@
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
 | Ours |87.8+/-6.5 |59.41+/-8.6 |75.3+/-3.8 | | |
-| GraphiT| | | | | 
+| GCN| | | | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
 | GIN | | | | | |
 | GraphSAGE | | | | |
+| Transformer | | | | | |
+| GraphiT | | | | |
 
 
 
