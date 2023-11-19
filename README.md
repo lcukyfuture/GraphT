@@ -17,11 +17,13 @@
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
-| GIN | | | | | |
+| GIN |86.11+/-9.38 |57.35+/-8.34 |74.68+/-5.00 | | |
 | GraphSAGE | | | | |
 | Transformer | | | | | |
 | GraphiT | | | | |
 
+### GIN GRID SEARCH
+same as the paper
 
 
 ## MUTAG 2023/9/13 
