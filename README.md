@@ -12,15 +12,18 @@
 ## Grid Search Result
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |87.8+/-6.5 |59.41+/-8.6 |75.3+/-3.8 | | |
+| Ours |87.8+/-2.3 |59.41+/-3.2|75.3+/-1.2| | |
 | GCN| | | | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
-| GIN |86.11+/-9.38 |57.35+/-8.34 |74.68+/-5.00 | | |
-| GraphSAGE | | | | |
+| GIN |86.11+/-3.0 |57.35+/-2.6 |74.68+/-1.6 |79.76+/-0.7 |
+| GraphSAGE |85.00+/-4.0 | | | |
 | Transformer | | | | | |
 | GraphiT | | | | |
+
+### Our grid search
+
 
 ### GIN GRID SEARCH
 same as the paper
