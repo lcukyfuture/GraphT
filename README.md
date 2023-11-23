@@ -23,11 +23,26 @@
 | GraphiT | | | | |
 
 ### Our grid search
-
+MUTAG:
+batch_size: 32/64
+drop_out: 0/0.1
+layer: 1/2/3/4/5/6
+hop: 1/2/3/4/5
+k: 2/3/4/5
+PTC:
+batch_size: 32/64
+drop_out: 0/0.1
+layer: 1/2/3/4/5/6
+hop: 1/2/3/4/5
+k: 2/3/4/5
+PROTEINS:
+batch_size: 32/64/128
+drop_out: 0/0.1
+layer: 1/2/3/4/5/6
+hop: 1/2/3/4/5
 
 ### GIN GRID SEARCH
 same as the paper
-
 
 ## MUTAG 2023/9/13 
 <font color=Yellow>Bold plus italic is the highest accuracy, bold is the second highest, and italic is the third highest.</font>
