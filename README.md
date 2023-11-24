@@ -12,7 +12,7 @@
 ## Grid Search Result
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |87.8+/-2.3 |59.41+/-3.2|75.3+/-1.2| | |
+| Ours |87.78+/-2.3 |61.18+/-3.1|75.32+/-1.2| | |
 | GCN| | | | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
@@ -23,26 +23,46 @@
 | GraphiT | | | | |
 
 ### Our grid search
+StepLR(optimizer, step_size=25, gamma=0.5)
+
+lr:0.001
+
 MUTAG:
+
+k:3
+
 batch_size: 32/64
+
 drop_out: 0/0.1
+
 layer: 1/2/3/4/5/6
+
 hop: 1/2/3/4/5
-k: 2/3/4/5
+
 
 PTC:
-batch_size: 32/64
+
+k:3
+
+batch_size: 32/64/128
+
 drop_out: 0/0.1
+
 layer: 1/2/3/4/5/6
+
 hop: 1/2/3/4/5
-k: 2/3/4/5
 
 PROTEINS:
 Because of the limitation of GPU memory, We will not search 3,4 and 5 hop with k=4 and 5. 
+
 k:3
+
 batch_size: 32/64/128
+
 drop_out: 0/0.1
+
 layer: 1/2/3/4/5/6
+
 hop: 1/2/3/4/5
 
 ### GIN GRID SEARCH
