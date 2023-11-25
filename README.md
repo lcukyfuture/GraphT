@@ -67,6 +67,7 @@ hop: 1/2/3/4/5
 
 ### GIN GRID SEARCH
 same as the paper
+![Graph1_1hop_WL3](Figures/othermodels/GridSearch.png)
 
 ## MUTAG 2023/9/13 
 <font color=Yellow>Bold plus italic is the highest accuracy, bold is the second highest, and italic is the third highest.</font>
