@@ -12,7 +12,7 @@
 ## Grid Search Result
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |87.78+/-2.3 |61.18+/-3.1|75.32+/-1.2| | |
+| Ours |88.33+/-2.1 |61.18+/-3.1|75.32+/-1.2| | |
 | GCN| | | | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
@@ -28,8 +28,9 @@ StepLR(optimizer, step_size=25, gamma=0.5)
 lr:0.001
 
 MUTAG:
+StepLR(optimizer, step_size=50, gamma=0.5)
 
-k:3
+k:2/3/4/5
 
 batch_size: 32/64
 
