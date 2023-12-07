@@ -19,9 +19,20 @@
 | ECC | | | | | |
 | GIN |86.11+/-3.0 |57.35+/-2.6 |74.68+/-1.6 |79.76+/-0.7 |
 | GraphSAGE |85.00+/-4.0 |59.71+/-1.7 |72.97+/-1.5 | |
-| Transformer |76.11+/-2.9 | | | | |
+| Transformer |76.11+/-2.9 |59.12+/-3.8 | | | |
 | GraphiT | | | | |
-
+## Grid Search Result with 200 Patience
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
+| :-----:| :------: | :------: | :----: | :---:|
+| Ours |88.33+/-2.1 |61.18+/-3.1|75.32+/-1.2| | |
+| GCN|76.67+/-3.8 |57.94+/-2.2 |73.15+/-1.6 | | 
+| DGCNN | | | | | |
+| DiffPool | | | | | 
+| ECC | | | | | |
+| GIN |80.26+/-3.1 |58.69+/-1.6 | | |
+| GraphSAGE |72.22+/-2.8 |55.78+/-2.7| | |
+| Transformer | | | | | |
+| GraphiT | | | | |
 ### Our grid search
 StepLR(optimizer, step_size=25, gamma=0.5)
 
