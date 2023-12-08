@@ -24,13 +24,13 @@
 ## Grid Search Result with 200 Patience
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours | ||| | |
-| GCN|| | | | 
+| Ours |80.2+/-3.5 ||| | |
+| GCN|75.99+/-3.5| | | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
-| GIN |80.26+/-3.1 |58.69+/-1.6 | | |
-| GraphSAGE |72.22+/-2.8 |55.78+/-2.7| | |
+| GIN |80.26+/-3.1 |58.69+/-1.6 |74.76+/-0.9 |78.89+/-0.6 |
+| GraphSAGE |72.22+/-2.8 |55.78+/-2.7|71.25+/-1.5 | |
 | Transformer | | | | | |
 | GraphiT | | | | |
 ### Our grid search
