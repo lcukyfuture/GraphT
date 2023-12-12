@@ -1,6 +1,7 @@
 import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
 import torch
 
 import torch.nn as nn
@@ -8,7 +9,6 @@ import torch.nn as nn
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset, GNNBenchmarkDataset
 import torch.nn.functional as F
-from model import GCN, ClassificationModel
 from cachemodel import GraphTransformer
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
@@ -19,7 +19,7 @@ import time
 import argparse
 import copy
 from data_idx import GraphDataset
-from utils import compute_kernel_for_batch
+from utils import compute_kernel_for_batch, count_parameters, KernelCacheControl
 import hashlib
 def load_args():
     parser = argparse.ArgumentParser(description='Graph Kernel Transformer Training', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -36,7 +36,7 @@ def load_args():
     parser.add_argument('--epochs', type=int, default=300,help='number of epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=32, help='training batch_size')
-    parser.add_argument('--dropout', type=float, default=0, choices=[0, 0.1, 0.2])
+    parser.add_argument('--dropout', type=float, default=0, help='drop out rate')
     parser.add_argument('--outdir', type=str, default='',help='output path')
     parser.add_argument('--wl', type=int, default=3, help='WL_GPU iteration')
     args = parser.parse_args()
@@ -64,28 +64,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 kernel_cache = {}
 
-def save_kernel_to_cache(batch_data, kernels):
-    for i, kernel in enumerate(kernels):
-        graph_idx = batch_data[i].idx[0]
-        kernel_cache[graph_idx] = kernel
-    
-
-def load_kernel_cache(batch_data):
-    kernels = []
-    for i in range(len(batch_data)):
-        graph_idx = batch_data[i].idx[0].item()
-        kernel = kernel_cache.get(graph_idx, None)
-        kernels.append(kernel)
-    return kernels
-
-def compute_and_cache_kernel_for_batch(batch_data):
-    kernels = compute_kernel_for_batch(batch_data, device, args.wl)
-    save_kernel_to_cache(batch_data, kernels)
-
-def precompute_and_cache_kernels(loader):
+def precompute_and_cache_kernels(loader, kernel_cache_control):
     print('compute kernel')
+    if kernel_cache_control.kernel_cache:
+        print('kernel cache exists')
+        return
     for batch_data in loader:
-       compute_and_cache_kernel_for_batch(batch_data)
+        kernels = compute_kernel_for_batch(batch_data, device, args.wl)
+        kernel_cache_control.save_kernel_to_cache(batch_data, kernels)
     print('end')
 # def save_gradients(model, filename="gradients.txt"):
 #     with open(filename, "w") as f:
@@ -96,15 +82,14 @@ def precompute_and_cache_kernels(loader):
 
 # train_dataloader = DataLoader(dataset=train_dataset, batch_size=32, shuffle=True)
 # test_dataloader = DataLoader(dataset=test_dataset, batch_size=32, shuffle=False)
-def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch): 
+def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, kernel_cache_control): 
     model.train()
     total_loss = 0
     train_corr = 0
     nums = 0
     strat_time = time.time()
     for i, data in enumerate(loader):
-        kernel = load_kernel_cache(data)
-        # print(kernel)
+        kernel = kernel_cache_control.load_kernel_cache(data)
         if None in kernel:
             print("error")
         size = len(data.y)
@@ -130,13 +115,13 @@ def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch):
     return train_avg_loss, train_avg_corr, epoch_time
 
 
-def val(loader, model, criterion):
+def val(loader, model, criterion, kernel_cache_control):
     model.eval()
     val_loss = 0
     val_nums = 0
     corr = 0
     for data in loader:
-        kernel = load_kernel_cache(data)
+        kernel = kernel_cache_control.load_kernel_cache(data)
         # print(kernel)
         if None in kernel:
             print("error")
@@ -152,7 +137,7 @@ def val(loader, model, criterion):
     val_avg_corr = corr / len(loader.dataset)
     return val_avg_loss, val_avg_corr
 
-def plot_curve(kernel, train_loss_list, test_loss_list, train_acc_list, test_acc_list, fold):
+def plot_curve(train_loss_list, test_loss_list, train_acc_list, test_acc_list, fold):
     plt.figure(figsize=(10, 6))
 
     plt.subplot(1, 3, 1)
@@ -187,13 +172,18 @@ global args
 
 def main():
 
+    torch.manual_seed(44)
+    np.random.seed(44)
+    torch.use_deterministic_algorithms(True)
+    cache_dir = f'cache/{args.dataset}/hop_{args.hop}wl_{args.wl}'
+    kernel_cache_control = KernelCacheControl(cache_dir, args.hop, args.wl)
     kernel_cache.clear()
     Allstart_time = time.time()
     dataset = GraphDataset(raw_dataset, k_hop = args.hop)
     print("Length of dataset:", len(dataset))
     print(f"{args.num_layers}layers {args.hop}hops")
-    full_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False)
-    precompute_and_cache_kernels(full_loader)
+    full_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=False)
+    precompute_and_cache_kernels(full_loader, kernel_cache_control)
     train_acc_list = []
     val_acc_list = []
     train_loss_list = []
@@ -208,8 +198,8 @@ def main():
     # indices = list(kf.split(dataset))
     # best_acc = 0
     # best_accs = []
-    idx_path = 'datasets/{}/inner_folds/{}-{}-{}.txt'
-    test_idx_path = 'datasets/{}/test_idx-{}.txt'
+    idx_path = 'new_folds/{}/inner_folds/{}-{}-{}.txt'
+    test_idx_path = 'new_folds/{}/test_idx-{}.txt'
     inner_idx = 1
 
     train_fold_idx = torch.from_numpy(np.loadtxt(
@@ -249,6 +239,7 @@ def main():
                             kernel=args.kernel,
                             hop=args.hop,
                             same_attn=True).to(device)
+    print("Total number of parameters: {}".format(count_parameters(model)))
     # for name, param in model.named_parameters():
     #     print(name, param.data)
     # print(model)
@@ -272,32 +263,40 @@ def main():
     #     return lr
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
-
+    best_loss = float('inf')
+    patience_counter = 0
     for epoch in range(args.epochs):
 
         print(f'Epoch: {epoch}/{args.epochs}, LR: {optimizer.param_groups[0]["lr"]}')
         # train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, warmup_lr_scheduler, epoch)
-        train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
-        val_loss, val_acc = val(val_dataloader, model, criterion)
+        train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, kernel_cache_control)
+        val_loss, val_acc = val(val_dataloader, model, criterion, kernel_cache_control)
         lr_scheduler.step()
-        if best_acc < val_acc and epoch > 250:
-            best_acc = val_acc
+        if val_loss < best_loss:
+            best_loss = val_loss
             best_epoch = epoch
             best_weight = copy.deepcopy(model.state_dict())
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= 200:
+                break
+
         train_acc_list.append(train_acc)
         val_acc_list.append(val_acc)
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)
-        # torch.save(model.state_dict(), 'best_model_fold_{}.pth'.format(i+1)) 
-        print(f'epoch: {epoch:03d}, Train loss: {train_loss:.4f}, val loss:{val_loss:.4f}, Train acc: {train_acc:.4f}, val acc : {val_acc:.4f}, Best acc: {best_acc:.4f}, Epoch time: {epoch_time}')
-        csv_writer.writerow([epoch, train_loss, train_acc, val_loss, val_acc, best_epoch, best_acc])
+
+        print(f'epoch: {epoch:03d}, Train loss: {train_loss:.4f}, val loss:{val_loss:.4f}, Train acc: {train_acc:.4f}, val acc : {val_acc:.4f}, Best loss: {best_loss:.4f}, Epoch time: {epoch_time}')
+        csv_writer.writerow([epoch, train_loss, train_acc, val_loss, val_acc, best_epoch, best_loss])
+
     print(f'Best epoch: {best_epoch}')
-    print(f'Best val acc for fold {args.fold}:{best_acc:.4f}')
+    print(f'Best val loss for fold {args.fold}: {best_loss:.4f}')
     model.load_state_dict(best_weight)
-    test_loss, test_acc = val(test_dataloader, model, criterion)
+    test_loss, test_acc = val(test_dataloader, model, criterion, kernel_cache_control)
     print(f'Test acc for fold {args.fold}: {test_acc:.4f}')
     csv_writer.writerow([test_loss, test_acc])
-    plot_curve(args.kernel, train_loss_list, val_loss_list, train_acc_list, val_acc_list, args.fold)
+    plot_curve(train_loss_list, val_loss_list, train_acc_list, val_acc_list, args.fold)
 
     Allend_time = time.time()
     Gap_time = Allend_time - Allstart_time

@@ -24,14 +24,14 @@
 ## Grid Search Result with 200 Patience
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |80.2+/-3.5 ||| | |
-| GCN|75.99+/-3.5| | | | 
+| Ours |80.2+/-3.5||| | |
+| GCN|75.99+/-3.5| 56.11+/-2.8 |71.60+/-0.8 | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
 | GIN |80.26+/-3.1 |58.69+/-1.6 |74.76+/-0.9 |78.89+/-0.6 |
-| GraphSAGE |72.22+/-2.8 |55.78+/-2.7|71.25+/-1.5 | |
-| Transformer | | | | | |
+| GraphSAGE |72.22+/-2.8 |55.78+/-2.7|71.25+/-1.5 |77.44+/-0.7 |
+| Transformer |72.78+/-3.6 | |70.98+/-1.1 | |65.67+/-0.7 |
 | GraphiT | | | | |
 ### Our grid search
 StepLR(optimizer, step_size=25, gamma=0.5)
