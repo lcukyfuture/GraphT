@@ -9,10 +9,10 @@
 4. Trying different attentions.
 5. Positional encoding
 6. Multi head attention
-## Grid Search Result
+## Grid Search Result(old folds)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |88.33+/-2.1 |61.18+/-3.1|75.32+/-1.2| | |
+| Ours |87.78+/-2.0 |61.18+/-3.1|75.77+/-1.2| | |
 | GCN|76.67+/-3.8 |57.94+/-2.2 |73.15+/-1.6 | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
@@ -21,18 +21,33 @@
 | GraphSAGE |85.00+/-4.0 |59.71+/-1.7 |72.97+/-1.5 | |
 | Transformer |76.11+/-2.9 |59.12+/-3.8 | | | |
 | GraphiT | | | | |
-## Grid Search Result with 200 Patience
+
+## Grid Search Result same val acc but best val loss(old fods)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |80.2+/-3.5||| | |
+| Ours |83.9+/-2.4| 57.94+/-3.1|75.32+/-1.2| | |
+| GCN|76.67+/-3.8||72.70+/-1.6 | | 
+| DGCNN | | | | | |
+| DiffPool | | | | | 
+| ECC | | | | | |
+| GIN |71.10+/-3.4|59.41+/-2.66 |70.04+/-1.5 | |
+| GraphSAGE |79.44+/-4.8 |59.41+/-1.8|71.08+/-1.1 | |
+| Transformer |74.44+/-3.0 |57.06+/-3.5 | | | |
+| GraphiT | | | | |
+
+## Grid Search Result with 200 Patience(new folds)
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
+| :-----:| :------: | :------: | :----: | :---:|
+| Ours |80.2+/-3.5| 55.08+/-2.6|75.14+/-1.3| | |
 | GCN|75.99+/-3.5| 56.11+/-2.8 |71.60+/-0.8 | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
 | GIN |80.26+/-3.1 |58.69+/-1.6 |74.76+/-0.9 |78.89+/-0.6 |
 | GraphSAGE |72.22+/-2.8 |55.78+/-2.7|71.25+/-1.5 |77.44+/-0.7 |
-| Transformer |72.78+/-3.6 | |70.98+/-1.1 | |65.67+/-0.7 |
-| GraphiT | | | | |
+| Transformer |72.78+/-3.6 |51.74+/-2.0 |70.98+/-1.1 |65.67+/-0.7 |
+| GraphiT + diffusion|81.46+/-2.6 |60.14+/-2.1 | | |
+| GraphiT + adj |79.27+/-1.7 | | | |
 ### Our grid search
 StepLR(optimizer, step_size=25, gamma=0.5)
 
