@@ -9,17 +9,17 @@
 4. Trying different attentions.
 5. Positional encoding
 6. Multi head attention
-## Grid Search Result(old folds)
+## Grid Search Result same val acc but average test acc(old folds)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |87.78+/-2.0 |61.18+/-3.1|75.77+/-1.2| | |
-| GCN|76.67+/-3.8 |57.94+/-2.2 |73.15+/-1.6 | | 
+| Ours |83.81+/-2.1 |57.89+/2.4|74.64+/-1.3| | 
+| GCN|72.09+/-4.0 |55.62+/-2.3 |72.85+/-1.5 | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
-| GIN |86.11+/-3.0 |57.35+/-2.6 |74.68+/-1.6 |82.24+/-0.3 |
-| GraphSAGE |85.00+/-4.0 |59.71+/-1.7 |72.97+/-1.5 | |
-| Transformer |76.11+/-2.9 |59.12+/-3.8 | | | |
+| GIN |87.77+/-2.0|56.02+/-2.4 |74.77+/-1.5|79.67+/-0.7 |
+| GraphSAGE |77.31+/-4.0|58.91+/-1.6 |71.64+/-1.4 | |
+| Transformer |74.86+/-3.0 |56.50+/-3.2 | | | |
 | GraphiT | | | | |
 
 ## Grid Search Result same val acc but best val loss(old fods)
@@ -30,7 +30,7 @@
 | DGCNN | | | | | |
 | DiffPool | | | | | 
 | ECC | | | | | |
-| GIN |71.10+/-3.4|59.41+/-2.66 |70.04+/-1.5 |79.76+/-0.7 |
+| GIN |86.67+/-2.6|55.88+/-3.0 |74.23+/-1.5 |79.76+/-0.7 |
 | GraphSAGE |79.44+/-4.8 |59.41+/-1.8|71.08+/-1.1 | |
 | Transformer |74.44+/-3.0 |57.06+/-3.5 | | | |
 | GraphiT | | | | |
