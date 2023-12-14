@@ -20,7 +20,7 @@
 | GIN |87.77+/-2.0|56.02+/-2.4 |74.77+/-1.5|79.67+/-0.7 |
 | GraphSAGE |77.31+/-4.0|58.91+/-1.6 |71.64+/-1.4 | |
 | Transformer |74.86+/-3.0 |56.50+/-3.2 | | | |
-| GraphiT | | | | |
+| GraphiT + diffusion |81.59+/-2.4 | | | |
 
 ## Grid Search Result same val acc but best val loss(old fods)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
@@ -33,12 +33,12 @@
 | GIN |86.67+/-2.6|55.88+/-3.0 |74.23+/-1.5 |79.76+/-0.7 |
 | GraphSAGE |79.44+/-4.8 |59.41+/-1.8|71.08+/-1.1 | |
 | Transformer |74.44+/-3.0 |57.06+/-3.5 | | | |
-| GraphiT | | | | |
+| GraphiT + diffusion |83.33+/-2.5 | | | |
 
 ## Grid Search Result with 200 Patience(new folds)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |80.2+/-3.5| 55.08+/-2.6|75.14+/-1.3| | |
+| Ours |80.2+/-3.5| 55.08+/-2.6|| | |
 | GCN|75.99+/-3.5| 56.11+/-2.8 |71.60+/-0.8 | | 
 | DGCNN | | | | | |
 | DiffPool | | | | | 
