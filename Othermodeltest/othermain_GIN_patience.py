@@ -1,44 +1,36 @@
-import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
+import sys
+sys.path.append("./")
 import torch
-
 import torch.nn as nn
 # from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset, GNNBenchmarkDataset
 import torch.nn.functional as F
-from cachemodel import GraphTransformer
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 import numpy as np
-
+import os
 import csv
 import time 
 import argparse
 import copy
-from data_idx import GraphDataset
-from utils import compute_kernel_for_batch, count_parameters, KernelCacheControl
-import hashlib
+from torch_geometric.nn.models import GIN
+from GIN import GIN
+
 def load_args():
     parser = argparse.ArgumentParser(description='Graph Kernel Transformer Training', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--dataset', type=str, default='MUTAG', choices=['MUTAG', 'PATTERN', 'PROTEINS','NCI1', 'PTC_MR', 'ogbg-molhiv'],
                         help='Dataset to use')
-    parser.add_argument('--num-layers', type=int, default=3, help="number of layers")
-    parser.add_argument('--hop', type=int, default=2, help='Hop for subgraph extraction')
-    parser.add_argument('--kernel', type=str, default='WL_GPU', choices=['SP', 'WL', 'WLSP', 'RW','GL', 'WL_GPU'],
-                        help='Kernel type')
-    parser.add_argument('--fold', type=int, default=10, help='The number of K folds')
-    parser.add_argument('--same-attn', type=bool, default=True, help='Use the same ')
-    parser.add_argument('--dim_hidden', type=int, default=64, help="hidden dimension of Transformer")
+    parser.add_argument('--num-layers', type=int, default=5, help="number of layers")
+    parser.add_argument('--dim_hidden', type=int, default=64, help="hidden dimension of model")
+    parser.add_argument('--fold', type=int, default=1, help='The number of K folds')
+    # parser.add_argument('--dim_hidden', type=int, default=64, help="hidden dimension of Transformer")
     parser.add_argument('--epochs', type=int, default=300,help='number of epochs')
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
-    parser.add_argument('--batch_size', type=int, default=32, help='training batch_size')
-    parser.add_argument('--dropout', type=float, default=0, help='drop out rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--batch_size', type=int, default=128, help='training batch_size')
+    parser.add_argument('--dropout', type=float, default=0, help='dropout rate')
     parser.add_argument('--outdir', type=str, default='',help='output path')
-    parser.add_argument('--wl', type=int, default=3, help='WL_GPU iteration')
     args = parser.parse_args()
     
     if args.outdir != '':
@@ -51,7 +43,7 @@ def load_args():
         outdir = os.path.join(outdir,'fold_{}'.format(args.fold))
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        outdir = outdir + '/{}_{}_{}_{}_{}_{}_{}'.format(args.kernel, args.wl, args.num_layers, args.hop, args.dropout, args.lr, args.batch_size)
+        outdir = outdir + '/{}_{}_{}_{}_{}'.format(args.num_layers, args.dropout, args.lr, args.batch_size, args.dim_hidden)
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
@@ -62,17 +54,6 @@ def load_args():
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-kernel_cache = {}
-
-def precompute_and_cache_kernels(loader, kernel_cache_control):
-    print('compute kernel')
-    if kernel_cache_control.kernel_cache:
-        print('kernel cache exists')
-        return
-    for batch_data in loader:
-        kernels = compute_kernel_for_batch(batch_data, device, args.wl)
-        kernel_cache_control.save_kernel_to_cache(batch_data, kernels)
-    print('end')
 # def save_gradients(model, filename="gradients.txt"):
 #     with open(filename, "w") as f:
 #         for name, param in model.named_parameters():
@@ -82,16 +63,13 @@ def precompute_and_cache_kernels(loader, kernel_cache_control):
 
 # train_dataloader = DataLoader(dataset=train_dataset, batch_size=32, shuffle=True)
 # test_dataloader = DataLoader(dataset=test_dataset, batch_size=32, shuffle=False)
-def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, kernel_cache_control): 
+def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch): 
     model.train()
     total_loss = 0
     train_corr = 0
     nums = 0
     strat_time = time.time()
     for i, data in enumerate(loader):
-        kernel = kernel_cache_control.load_kernel_cache(data)
-        if None in kernel:
-            print("error")
         size = len(data.y)
         # iteration = epoch * len(loader) + i
         # for param in optimizer.param_groups:
@@ -99,7 +77,7 @@ def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, ker
         data = data.to(device)
         optimizer.zero_grad()
         #add kernel to model
-        out = model(data, kernel)
+        out = model(data)
         loss = criterion(out, data.y)
         total_loss += loss.item()*size
         nums += size
@@ -115,19 +93,15 @@ def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, ker
     return train_avg_loss, train_avg_corr, epoch_time
 
 
-def val(loader, model, criterion, kernel_cache_control):
+def val(loader, model, criterion):
     model.eval()
     val_loss = 0
     val_nums = 0
     corr = 0
     for data in loader:
-        kernel = kernel_cache_control.load_kernel_cache(data)
-        # print(kernel)
-        if None in kernel:
-            print("error")
         size = len(data.y)
         data = data.to(device)
-        out = model(data, kernel)
+        out = model(data)
         loss = criterion(out, data.y)
         val_loss += loss.item()*size
         val_nums += size
@@ -137,7 +111,7 @@ def val(loader, model, criterion, kernel_cache_control):
     val_avg_corr = corr / len(loader.dataset)
     return val_avg_loss, val_avg_corr
 
-def plot_curve(train_loss_list, test_loss_list, train_acc_list, test_acc_list, fold):
+def plot_curve( train_loss_list, test_loss_list, train_acc_list, test_acc_list, fold):
     plt.figure(figsize=(10, 6))
 
     plt.subplot(1, 3, 1)
@@ -163,7 +137,7 @@ def plot_curve(train_loss_list, test_loss_list, train_acc_list, test_acc_list, f
     plt.suptitle(f'Loss And Accuacy Curves of Fold {fold}')
     # plt.savefig(f'{args.kernel}{args.num_layers}layer{args.hop}hops{args.dropout}dropout_figs/curves_fold_{fold}.png')
     plt.savefig(os.path.join(args.outdir, f'curves_fold_{fold}.png'))
-    plt.show()
+    # plt.show()
 
 
 global args
@@ -171,27 +145,21 @@ global args
 
 
 def main():
-
     torch.manual_seed(44)
     np.random.seed(44)
-    torch.use_deterministic_algorithms(True)
-    cache_dir = f'cache/{args.dataset}/hop_{args.hop}wl_{args.wl}'
-    kernel_cache_control = KernelCacheControl(cache_dir, args.hop, args.wl)
-    kernel_cache.clear()
     Allstart_time = time.time()
-    dataset = GraphDataset(raw_dataset, k_hop = args.hop)
+    dataset = raw_dataset
     print("Length of dataset:", len(dataset))
-    print(f"{args.num_layers}layers {args.hop}hops")
-    full_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=False)
-    precompute_and_cache_kernels(full_loader, kernel_cache_control)
+    print(f"{args.num_layers}layers")
     train_acc_list = []
     val_acc_list = []
     train_loss_list = []
     val_loss_list = []
+    best_acc = 0
     # csv_file = open(f'{args.kernel}{args.num_layers}layer{args.hop}hops{args.dropout}dropout_figs/{args.kernel}{args.num_layers}layer{args.hop}hops_results.csv', 'w', newline='')
     csv_file = open(args.outdir + '/results.csv', 'w', newline='')
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(['Epoch', 'Train Loss', 'Train Accuracy', 'Test Loss', 'Test Accuracy', 'Best Epoch','Best Accuracy'])
+    csv_writer.writerow(['Epoch', 'Train Loss', 'Train Accuracy', 'Test Loss', 'Test Accuracy', 'Best Epoch','Best loss'])
 
 
     # kf = KFold(n_splits=5, shuffle=True, random_state=1)
@@ -225,53 +193,42 @@ def main():
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
     val_dataloader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, shuffle=False)
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, shuffle=False)
-    
-    model = GraphTransformer(in_size=raw_dataset.num_node_features,
-                            num_class=raw_dataset.num_classes,
-                            d_model=args.dim_hidden,
-                            dim_feedforward=2*args.dim_hidden,
-                            dropout=args.dropout,
-                            num_layers=args.num_layers,
-                            batch_norm=False,
-                            use_edge_attr=False,
-                            num_edge_features=raw_dataset.num_edge_features,
-                            use_global_pool=False,
-                            kernel=args.kernel,
-                            hop=args.hop,
-                            same_attn=True).to(device)
-    print("Total number of parameters: {}".format(count_parameters(model)))
+    if args.num_layers == 5 and args.dim_hidden == 32:
+        hidden_units = [32, 32, 32, 32]
+    elif args.num_layers == 5 and args.dim_hidden == 64:
+        hidden_units = [64, 64, 64, 64]
+    elif args.num_layers == 3 and args.dim_hidden == 32:
+        hidden_units = [32, 32]
+    elif args.num_layers == 2 and args.dim_hidden == 64:
+        hidden_units = [64]
+
+    model = GIN(dim_features = dataset.num_node_features, dim_target = dataset.num_classes, hidden_units = hidden_units, 
+                dropout=args.dropout, train_eps=True, aggregation='sum').to(device)
+    # model = GIN(in_channels=dataset.num_node_features, hidden_channels=2 * args.dim_hidden,num_layers=args.num_layers,
+    #             out_channels=dataset.num_classes,
+    #             dropout=args.dropout).to(device)
     # for name, param in model.named_parameters():
     #     print(name, param.data)
     # print(model)
     # print(model.parameters)
     warm_up = 10
     weight_decay = 1e-4
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr , weight_decay = weight_decay)
+    lr = args.lr
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
-    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs-warm_up)
-    # lr_steps = lr / (warm_up * len(train_dataloader))
-    # def warmup_lr_scheduler(s):
-    #     lr = s * lr_steps
-    #     return lr
-    # lr_steps = (args.lr - 1e-6) / args.warmup
-    # decay_factor = args.lr * args.warmup ** .5
-    # def lr_scheduler(s):
-    #     if s < args.warmup:
-    #         lr = 1e-6 + s * lr_steps
-    #     else:
-    #         lr = decay_factor * s ** -.5
-    #     return lr
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
+
     best_loss = float('inf')
     patience_counter = 0
-    for epoch in range(args.epochs):
 
+    for epoch in range(args.epochs):
         print(f'Epoch: {epoch}/{args.epochs}, LR: {optimizer.param_groups[0]["lr"]}')
-        # train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, warmup_lr_scheduler, epoch)
-        train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, lr_scheduler, epoch, kernel_cache_control)
-        val_loss, val_acc = val(val_dataloader, model, criterion, kernel_cache_control)
+
+        train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
+        val_loss, val_acc = val(val_dataloader, model, criterion)
         lr_scheduler.step()
+
         if val_loss < best_loss:
             best_loss = val_loss
             best_epoch = epoch
@@ -293,7 +250,7 @@ def main():
     print(f'Best epoch: {best_epoch}')
     print(f'Best val loss for fold {args.fold}: {best_loss:.4f}')
     model.load_state_dict(best_weight)
-    test_loss, test_acc = val(test_dataloader, model, criterion, kernel_cache_control)
+    test_loss, test_acc = val(test_dataloader, model, criterion)
     print(f'Test acc for fold {args.fold}: {test_acc:.4f}')
     csv_writer.writerow([test_loss, test_acc])
     plot_curve(train_loss_list, val_loss_list, train_acc_list, val_acc_list, args.fold)
@@ -302,7 +259,7 @@ def main():
     Gap_time = Allend_time - Allstart_time
     print(f'Time: {Gap_time}')
     csv_writer.writerow([Gap_time])
-    
+
 if __name__ == "__main__":
     args = load_args()
     # dataset = TUDataset(root='/tmp/MUTAG', name='MUTAG')
