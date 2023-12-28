@@ -9,31 +9,34 @@
 4. Trying different attentions.
 5. Positional encoding
 6. Multi head attention
+
+## Grid Search Result same val acc but best val loss(old fods)
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
+| :-----:| :------: | :------: | :----: | :---:|
+| Ours |85.56+/-2.4| 57.94+/-3.1|75.32+/-1.2|73.6+/-1.1|
+| GCN|76.67+/-3.8|55.59+/-2.7|72.70+/-1.6 | | 
+| DGCNN |76.11+/-4.0 |55.29+/-2.5 |72.79+/-1.4 | | |
+| DiffPool |77.22+/-4.0 |57.94+/-1.9 | | | 
+| ECC | | | | | |
+| GIN |86.67+/-2.6|55.88+/-3.0 |74.23+/-1.5 |79.76+/-0.7 |
+| GraphSAGE |79.44+/-4.8 |59.41+/-1.8|71.08+/-1.1 | |
+| Transformer |74.44+/-3.0 |57.06+/-3.5 | | | |
+| GraphiT + diffusion |83.33+/-2.5 |60.88+/-3.7 |74.77+/-2.0 |77.35+/-0.5 |
+| GraphiT + GCKN| | | | |
+
 ## Grid Search Result same val acc but average test acc(old folds)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
 | Ours |83.81+/-2.1 |57.89+/2.4|74.64+/-1.3| | 
 | GCN|72.09+/-4.0 |55.62+/-2.3 |72.85+/-1.5 | | 
-| DGCNN | | | | | |
-| DiffPool | | | | | 
+| DGCNN |77.46+/-3.3 |55.98+/-2.4 |72.97+/-1.4 | | |
+| DiffPool |77.22+/-4.0 |57.94+/-1.9 | | | 
 | ECC | | | | | |
 | GIN |87.77+/-2.0|56.02+/-2.4 |74.77+/-1.5|79.67+/-0.7 |
 | GraphSAGE |77.31+/-4.0|58.91+/-1.6 |71.64+/-1.4 | |
 | Transformer |74.86+/-3.0 |56.50+/-3.2 | | | |
-| GraphiT + diffusion |81.59+/-2.4 |59.63+/-3.3 | | |
-
-## Grid Search Result same val acc but best val loss(old fods)
-| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
-| :-----:| :------: | :------: | :----: | :---:|
-| Ours |83.9+/-2.4| 57.94+/-3.1|75.32+/-1.2| | |
-| GCN|76.67+/-3.8|55.59+/-2.7|72.70+/-1.6 | | 
-| DGCNN | | | | | |
-| DiffPool | | | | | 
-| ECC | | | | | |
-| GIN |86.67+/-2.6|55.88+/-3.0 |74.23+/-1.5 |79.76+/-0.7 |
-| GraphSAGE |79.44+/-4.8 |59.41+/-1.8|71.08+/-1.1 | |
-| Transformer |74.44+/-3.0 |57.06+/-3.5 | | | |
-| GraphiT + diffusion |83.33+/-2.5 |60.88+/-3.7 | | |
+| GraphiT + diffusion |81.59+/-2.4 |59.63+/-3.3 |74.33=+/-1.8 |77.64+/-0.5 |
+| GraphiT + GCKN| | | | |
 
 ## Grid Search Result with 200 Patience(new folds)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
@@ -89,6 +92,17 @@ batch_size: 32/64/128
 drop_out: 0/0.1
 
 layer: 1/2/3/4/5/6
+
+hop: 1/2/3/4/5
+
+NCI1:
+k: 3, 4, 5
+
+batch_size: 64/128
+
+drop_out: 0/0.2
+
+layer: 1/2/3
 
 hop: 1/2/3/4/5
 
