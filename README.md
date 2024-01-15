@@ -26,7 +26,7 @@
 | Transformer |72.78+/-3.6 |51.74+/-2.0 |70.98+/-1.1 |65.67+/-0.7 |
 | GraphiT + diffusion|81.46+/-2.6 |60.14+/-2.1 |74.21+/-1.2 |76.69+/-0.7 |
 | GraphiT + adj |79.27+/-1.7 |57.84+/-2.5 |71.07+/-1.4 |77.96+/-0.7 |
-| GraphiT + GCKN|||||
+| GraphiT + GCKN|81.93+/-2.2|59.91+/-3.2|||
 ### Our grid search
 StepLR(optimizer, step_size=25, gamma=0.5)
 
