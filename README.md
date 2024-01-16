@@ -31,20 +31,20 @@
 ## Average time cost
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |()|() |()| | |
+| Ours |(57.42+/-17.53)|() |()| | |
 | Ours + k=3 || || | |
 | Ours + k=4 || || | |
 | Ours + k=5 |||| | |
 | GCN|| | | | 
-| DGCNN |23.29+/-3.0 |27.71+/-4.7 |99.78+/-12.6 |423.64+/-22.9 |
-| DiffPool |17.88+/-3.0 |29.39+/-2.7 |121.41+/-17.1 |321.4+/-43.68 | 
-| ECC |39.89+/-5.74 |57.57+/-4.05 |287.98+/-36.79 |1361.18+/-167.84 |
+| DGCNN |40.33+/-5.7 |26.31+/-5.5 | | |
+| DiffPool | || || 
+| ECC | | | | |
 | GIN | | | | |
 | GraphSAGE | || | |
 | Transformer | || ||
 | GraphiT + diffusion| || | |
 | GraphiT + adj | | | | |
-| GraphiT + GCKN|(39.51+/-4.5)|(38.26+/-3.4)|||
+| GraphiT + GCKN|||||
 
 
 ### Our grid search
