@@ -81,7 +81,7 @@ hop: 1/2/3/4/5
 PROTEINS:
 Because of the limitation of GPU memory, We will not search 3,4 and 5 hop with k=4 and 5. 
 
-k:3
+k:3,4,5
 
 batch_size: 32/64/128
 
@@ -89,7 +89,7 @@ drop_out: 0/0.1
 
 layer: 1/2/3/4/5/6
 
-hop: 1/2/3/4/5
+hop: 1/2/3
 
 NCI1:
 k: 3, 4, 5
