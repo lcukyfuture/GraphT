@@ -31,7 +31,7 @@
 ## Average time cost
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |(58.85+/-12.9)|(91.58+/- 9.52) |(324.51+/-53.42)| | |
+| Ours |()|() |()| | |
 | Ours + k=3 || || | |
 | Ours + k=4 || || | |
 | Ours + k=5 |||| | |
