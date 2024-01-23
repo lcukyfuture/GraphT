@@ -29,6 +29,7 @@
 | GraphiT + GCKN|81.93+/-2.2|59.91+/-3.2|||
 
 ## Average time cost
+Total time (without pos and kernel)
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
 | Ours |(57.42+/-17.53)|() |()| | |
