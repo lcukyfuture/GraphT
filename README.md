@@ -30,6 +30,8 @@
 
 ## Average time cost
 Total time (without pos and kernel)
+
+The results of Our's MUTAG are a bit different than before because I re-ran the code to be able to calculate total time and withou kernel time at once.
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
 | Ours |77.38+/-23.57<br>(72.13+/-23.55)|80.36+/-6.76<br>(71.49+/-6.74) |358.13+/-39.65<br>(288.06+/-39.86)| | |
