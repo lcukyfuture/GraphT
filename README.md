@@ -26,7 +26,7 @@
 | Transformer |72.78+/-3.6 |51.74+/-2.0 |70.98+/-1.1 |65.67+/-0.7 |
 | GraphiT + diffusion|81.46+/-2.6 |60.14+/-2.1 |74.21+/-1.2 |76.69+/-0.7 |
 | GraphiT + adj |79.27+/-1.7 |57.84+/-2.5 |71.07+/-1.4 |77.96+/-0.7 |
-| GraphiT + GCKN|81.93+/-2.2|59.91+/-3.2|||
+| GraphiT + GCKN|81.93+/-2.2|59.91+/-3.2|70.98+/-1.3||
 
 ## Average time cost
 Total time (without pos and kernel)
@@ -34,7 +34,7 @@ Total time (without pos and kernel)
 The results of Our's MUTAG are a bit different than before because I re-ran the code to be able to calculate total time and withou kernel time at once.
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
-| Ours |77.38+/-23.57<br>(72.13+/-23.55)|80.36+/-6.76<br>(71.49+/-6.74) |358.13+/-39.65<br>(288.06+/-39.86)| | |
+| Ours |72.13+/-23.55<br>(66.89+/-23.54)|71.49+/-6.74<br>(62.62+/-6.71) |288.06+/-39.86<br>(217.98+/-40.16)| | |
 | Ours + k=3 || || | |
 | Ours + k=4 || || | |
 | Ours + k=5 |||| | |
@@ -47,7 +47,7 @@ The results of Our's MUTAG are a bit different than before because I re-ran the 
 | Transformer |12.89+/-0.65 |26.37+/-1.90|133.21+/-25.68 |306.66+/-34.51|
 | GraphiT + diffusion|17.53+/-1.38<br>(16.65+/-1.38)|32.36+/-2.73<br>(30.85+/-2.73)|203.73+/-14.46<br>(194.63+/-14.47) |485.92+/-16.39<br>(460.45+/-16.38) |
 | GraphiT + adj |25.00+/-4.54<br>(24.95+/-4.54) |28.81+/-2.40<br>(28.72+/-2.40) |182.79+/-11.27<br>(182.40+/-11.27) |421.41+/-6.27<br>(420.38+/-6.30) |
-| GraphiT + GCKN|||||
+| GraphiT + GCKN|28.99+/-4.37<br>(28.78+/-4.37)|30.37+/-1.97<br>(29.95+/-1.97)|88.88+/-6.93<br>(77.97+/-5.37)||
 
 
 ### Our grid search
