@@ -11,6 +11,7 @@
 6. Multi head attention
 
 ## Grid Search Result with 200 Patience with best val loss(new folds)
+Our_new experiments used fixed 32 batch, same as GraphiT
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
 | :-----:| :------: | :------: | :----: | :---:|
 | Ours |82.95+/-2.6| 54.40+/-2.7|73.67+/-1.3|71.12+/-0.7 | |
