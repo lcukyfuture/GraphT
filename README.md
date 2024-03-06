@@ -18,7 +18,7 @@ Our_new experiments used fixed 32 batch, same as GraphiT
 | Ours + k=3 |82.92+/-2.5|54.98+/-2.0 |74.22+/-1.2|71.39+/-0.7 | |
 | Ours + k=4 |81.87+/-2.3|54.97+/-1.8 |73.58+/-1.3|71.39+/-0.9 | |
 | Ours + k=5 |85.58+/-2.6|52.96+/-3.2|73.77+/-1.6|71.75+/-0.7 | |
-| Ours_new |84.56+/-2.7|56.69+/-2.4||| |
+| Ours_new |84.56+/-2.7|56.69+/-1.8|75.11+/-1.2||
 | GCN|75.99+/-3.5| 56.11+/-2.8 |71.60+/-0.8 |74.53+/-0.7 | 
 | DGCNN |85.03+/-2.7 |50.60+/-2.2 |73.86+/-0.7 |74.38+/-0.7 |
 | DiffPool |81.35+/-2.5 |57.83+/-2.3 |71.25+/-1.5 |79.32+/-0.9 | 
@@ -30,7 +30,7 @@ Our_new experiments used fixed 32 batch, same as GraphiT
 | GraphiT + adj |79.27+/-1.7 |57.84+/-2.5 |71.07+/-1.4 |77.96+/-0.7 |
 | GraphiT + GCKN|81.93+/-2.2|59.91+/-3.2|70.98+/-1.3|78.91+/-0.7|
 
-## Average time cost
+## Average total time cost
 Total time (without pos and kernel)
 
 The results of Our's MUTAG are a bit different than before because I re-ran the code to be able to calculate total time and withou kernel time at once.
@@ -40,7 +40,7 @@ The results of Our's MUTAG are a bit different than before because I re-ran the 
 | Ours + k=3 || || | |
 | Ours + k=4 || || | |
 | Ours + k=5 |||| | |
-| Ours_new |(20.36+/-4.32)|(33.59+/-4.07)|| | |
+| Ours_new |(22.23+/-4.08)|(27.27+/-6.04)|(165.39+/-15.08)| | |
 | GCN|35.46+/-8.62|25.88+/-4.13 |193.24+/-37.00 |340.24+/-38.75 | 
 | DGCNN |40.33+/-5.7 |26.31+/-5.5 |87.97+/-10.06 |330.68+/-15.77 |
 | DiffPool |17.52+/-2.9 |28.92+/-2.76|122.05+/-17.80 |324.19+/-42.07| 
@@ -51,6 +51,16 @@ The results of Our's MUTAG are a bit different than before because I re-ran the 
 | GraphiT + diffusion|17.53+/-1.38<br>(16.65+/-1.38)|32.36+/-2.73<br>(30.85+/-2.73)|203.73+/-14.46<br>(194.63+/-14.47) |485.92+/-16.39<br>(460.45+/-16.38) |
 | GraphiT + adj |25.00+/-4.54<br>(24.95+/-4.54) |28.81+/-2.40<br>(28.72+/-2.40) |182.79+/-11.27<br>(182.40+/-11.27) |421.41+/-6.27<br>(420.38+/-6.30) |
 | GraphiT + GCKN|28.99+/-4.37<br>(28.78+/-4.37)|30.37+/-1.97<br>(29.95+/-1.97)|88.88+/-6.93<br>(77.97+/-5.37)||
+
+## Average epoch time
+
+For 32 batch size 3 layers 1 head attention
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
+| :-----:| :------: | :------: | :----: | :---:|
+| Ours_new |0.0345 +/-0.0001|0.0798 +/-0.0002 |0.3364 +/-0.0001|1.0124 +/-0.0002 |
+| GraphiT + diffusion|0.0459+/-0.0001|0.1126+/-0.0001|0.4306+/-0.0001|1.3182+/-0.0002|
+| GraphiT + adj |||||
+
 
 
 ### Our grid search
