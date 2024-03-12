@@ -10,10 +10,20 @@
 5. Positional encoding
 6. Multi head attention
 
+
+## Grid Search Area 
+batch-size: 32
+
+num-layers: 1-3
+
+num-hop: 1-3
+
+num-wl iteration: 3-5
+
 ## Grid Search Result with 200 Patience with best val loss(new folds)
 Our_new experiments used fixed 32 batch, same as GraphiT
-| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|
-| :-----:| :------: | :------: | :----: | :---:| :---:|
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|IMDB-B|
+| :-----:| :------: | :------: | :----: | :---:| :---:|:---:|
 | Ours |82.95+/-2.6| 54.40+/-2.7|73.67+/-1.3|71.12+/-0.7 ||
 | Ours + k=3 |82.92+/-2.5|54.98+/-2.0 |74.22+/-1.2|71.39+/-0.7 | |
 | Ours + k=4 |81.87+/-2.3|54.97+/-1.8 |73.58+/-1.3|71.39+/-0.9 | |
@@ -34,8 +44,8 @@ Our_new experiments used fixed 32 batch, same as GraphiT
 Total time (without pos and kernel)
 
 The results of Our's MUTAG are a bit different than before because I re-ran the code to be able to calculate total time and withou kernel time at once.
-| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|
-| :-----:| :------: | :------: | :----: | :---:| :---: |
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|IMDB-B|
+| :-----:| :------: | :------: | :----: | :---:| :---: |:---:|
 | Ours |72.13+/-23.55<br>(66.89+/-23.54)|71.49+/-6.74<br>(62.62+/-6.71) |288.06+/-39.86<br>(217.98+/-40.16)| | |
 | Ours + k=3 || || | |
 | Ours + k=4 || || | |
@@ -45,7 +55,7 @@ The results of Our's MUTAG are a bit different than before because I re-ran the 
 | DGCNN |40.33+/-5.7 |26.31+/-5.5 |87.97+/-10.06 |330.68+/-15.77 |
 | DiffPool |17.52+/-2.9 |28.92+/-2.76|122.05+/-17.80 |324.19+/-42.07| 
 | ECC |39.49+/-5.79 |57.13+/-3.54 |291.51+/-38.24 |1357.29+/-162.07 |
-| GIN |12.72+/-1.57 |18.33+/-2.22 |67.39+/-8.02 |282.93+/-19.74 |
+| GIN |12.72+/-1.57 |18.33+/-2.22 |67.39+/-8.02 |282.93+/-19.74 |72.30+/-1.1|
 | GraphSAGE |14.86+/-2.31 |18.15+/-1.56|113.37+/-14.78 |331.66+/-40.91 |
 | Transformer |12.89+/-0.65 |26.37+/-1.90|133.21+/-25.68 |306.66+/-34.51||
 | GraphiT + diffusion|17.53+/-1.38<br>(16.65+/-1.38)|32.36+/-2.73<br>(30.85+/-2.73)|203.73+/-14.46<br>(194.63+/-14.47) |485.92+/-16.39<br>(460.45+/-16.38) |(192.51+/-10.80)|
