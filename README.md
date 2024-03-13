@@ -65,12 +65,12 @@ The results of Our's MUTAG are a bit different than before because I re-ran the 
 ## Average epoch time
 
 For 32 batch size 3 layers 1 head attention
-| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |
-| :-----:| :------: | :------: | :----: | :---:|
-| Ours_new |0.0345 +/-0.0001|0.0798 +/-0.0002 |0.3364 +/-0.0001|1.0124 +/-0.0002 |
-| GraphiT + diffusion|0.0459+/-0.0001|0.1126+/-0.0001|0.4306+/-0.0001|1.3182+/-0.0002|
-| GraphiT + adj |||||
-
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|
+| :-----:| :------: | :------: | :----: | :---:|:---:|
+| Ours_new |0.0345 +/-0.0001|0.0798 +/-0.0002 |0.3364 +/-0.0001|1.0124 +/-0.0002 |0.5117+/-0.0003|
+| GraphiT + diffusion|0.0459+/-0.0001|0.1126+/-0.0001|0.4306+/-0.0001|1.3182+/-0.0002|0.7695+/-0.0002|
+| GraphiT + adj |0.0730+/-0.0001|0.1411+/-0.0002|0.5093+/-0.0002|1.6167+/-0.0002|0.7672+/-0.0002|
+|GraphiT + GCKN|0.0631+/-0.0001|0.1067+/-0.0001|0.3503+/-0.0001|1.2486+/-0.0001|0.5856+/-0.0001|
 
 
 ### Our grid search
