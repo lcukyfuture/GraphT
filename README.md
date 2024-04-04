@@ -72,6 +72,14 @@ For 32 batch size 3 layers 1 head attention
 | GraphiT + adj |0.0730+/-0.0018|0.1161+/-0.0023|0.4452+/-0.0023|1.1167+/-0.0031|0.7672+/-0.0024|0.4039+/-0.0025|
 |GraphiT + GCKN|0.0631+/-0.0017|0.1067+/-0.0018|0.3503+/-0.0019|1.2486+/-0.0025|0.5856+/-0.0018|0.3248+/-0.0019|
 
+## Parameter Counting
+For 3 layers 1 head attention
+| Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|IMDB-BINARY|
+| :-----:| :------: | :------: | :----: | :---:|:---:|:---:|
+| Ours_new |79810|80514 |79554|81730 |81794 |88066|
+| GraphiT + diffusion|104386|105090|104130|106306|106370|112642|
+| GraphiT + adj |104386|105090|104130|106306|106370|112642|
+|GraphiT + GCKN|111362|112066|111106|113282|113346|119618|
 
 ### Our grid search
 StepLR(optimizer, step_size=25, gamma=0.5)
