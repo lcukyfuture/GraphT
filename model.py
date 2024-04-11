@@ -3,8 +3,6 @@ from torch import nn
 from layer import SimpleTransformerEncoderLayer
 from timeit import default_timer as timer
 
-
-
 class SimpleTransformerEncoder(nn.TransformerEncoder):
     def forward(self, src, pe, mask=None, src_key_padding_mask=None):
         output = src
@@ -15,7 +13,6 @@ class SimpleTransformerEncoder(nn.TransformerEncoder):
             output = self.norm(output)
         return output
 
-
 class GraphTransformer(nn.Module):
     # This is a variant of the GraphTransformer, where the node positional
     # information is injected in the attention score instead of being
@@ -25,7 +22,6 @@ class GraphTransformer(nn.Module):
                  dim_feedforward=512, dropout=0.1, nb_layers=4,
                  batch_norm=False):
         super(GraphTransformer, self).__init__()
-
 
         self.embedding = nn.Linear(in_features=in_size,
                                    out_features=d_model,
@@ -40,7 +36,7 @@ class GraphTransformer(nn.Module):
             nn.ReLU(True),
             nn.Linear(d_model, nb_class)
             )
-
+                     
     def forward(self, x, masks, pe):
         # We permute the batch and sequence following pytorch
         # Transformer convention
@@ -54,7 +50,6 @@ class GraphTransformer(nn.Module):
         output = self.pooling(output, masks)
 
         return self.classifier(output)
-
 
 class GlobalAvg1D(nn.Module):
     def __init__(self):
