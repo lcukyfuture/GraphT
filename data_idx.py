@@ -19,7 +19,6 @@ def my_inc(self, key, value, *args, **kwargs):
     else:
         return 0
 
-
 class SubgraphDataset(object):
     def __init__(self, dataset, k_hop=2, use_subgraph_edge_attr=False):
         
@@ -90,7 +89,6 @@ class SubgraphDataset(object):
             data.subembedding = self.subembedding_list[index]
 
         return data
-
                 
 class GraphDataset(object):
     def __init__(self, dataset):
@@ -100,8 +98,6 @@ class GraphDataset(object):
         self.n_features = dataset[0].x.shape[-1]
         self.pe_list = None
 
-
-
     def __len__(self):
         return len(self.dataset)
 
@@ -110,10 +106,6 @@ class GraphDataset(object):
         if self.pe_list is not None and len(self.pe_list) == len(self.dataset):
             data.pe = self.pe_list[index]
         return data
-
-
-
-
 
     def collate_fn(self):
         def collate(batch):
@@ -135,9 +127,7 @@ class GraphDataset(object):
                     pos_enc = torch.zeros((len(batch), max_len, max_len))
                 else:
                     print("Not implemented yet!")
-
-
-
+                    
             for i, g in enumerate(batch):
                 labels.append(g.y)
                 g_len = len(g.x)
@@ -150,5 +140,3 @@ class GraphDataset(object):
 
             return padded_x, mask, pos_enc, default_collate(labels)
         return collate
-
-
