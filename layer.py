@@ -1,134 +1,100 @@
-from torch_geometric.nn import MessagePassing
+
+import os
+os.environ["PATH"] = os.environ["PATH"]+":/usr/local/cuda/bin/"
+import torch
 from torch import nn
 import torch.nn.functional as F
+from einops import rearrange
+import sys
+sys.path.append('./src')
+
+
 import torch
-import math
-import numpy as np
+import torch.nn as nn
 
-
-def scaled_dot_product(q, k, v, mask=None):
-    d_k = q.size()[-1]
-    attn = (torch.matmul(q, k.transpose(-2, -1)))/math.sqrt(d_k)
-    if mask is not None:
-        attn = attn.masked_fill(mask==0, -9e15)
-    attn = F.Softmax(attn, dim=-1)
-    values = torch.matmul(attn, v)
-
-    return values, attn
-
-class multiheadattention(nn.module):
-    def __init__(self, input_dim, embed_dim, num_heads):
-        super().__init__()
-        assert embed_dim % num_heads == 0
-
+class SimplifiedAttention(nn.Module):
+    def __init__(self, embed_dim, dropout_p=0.1):
+        super(SimplifiedAttention, self).__init__()
         self.embed_dim = embed_dim
-        self.num_heads = num_heads
-        self.head_dim = embed_dim // num_heads
+        self.dropout_p = dropout_p
+        
+        self.in_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        # self.in_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
+        self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        # self.out_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
+        # self.in_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
+        # self.out_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
+        self.reset_parameters()
 
-        self.qkv_proj  = nn.Linear(input_dim, 3 * embed_dim)
-        self.o_proj = nn.Linear(embed_dim, embed_dim)
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.in_proj_weight)
+        # nn.init.constant_(self.in_proj_bias, 0)
+        nn.init.xavier_uniform_(self.out_proj_weight)
+        # nn.init.constant_(self.out_proj_bias, 0)
 
-        self._reset_parameters()
-    
-    def _reset_parameters(self):
-        nn.init.xavier_normal_(self.qkv_proj.weight)
-        self.qkv_proj.bias.data.fill_(0)
-        nn.init.xavier_normal_(self.o_proj)
-        self.o_proj.bias.data.fill(0)
+    def forward(self, value, attn_output_weights, key_padding_mask=None, need_weights=None):
+        tgt_len, bsz, embed_dim = value.size()
+        assert embed_dim == self.embed_dim, "Embedding dimension mismatch."
+        
+        v_proj = F.linear(value, self.in_proj_weight)
+        v_proj = v_proj.transpose(0, 1)  # Change shape to (bsz, tgt_len, embed_dim)
+        
+        
 
+        # # Apply key padding mask
+        # if key_padding_mask is not None:
+        #     attn_output_weights = attn_output_weights.view(bsz, 1, tgt_len,
+        #                                                tgt_len)
+        #     attn_output_weights = attn_output_weights.masked_fill(
+        #     key_padding_mask.unsqueeze(1).unsqueeze(2),
+        #     float('-inf'),
+        #     )
+        #     attn_output_weights = attn_output_weights.view(bsz, tgt_len, tgt_len)
+        
+        # print(attn_output_weights)
+            
+        # attn_output_weights = torch.exp(attn_output_weights)
+        # attn_output_weights = attn_output_weights / attn_output_weights.sum(dim=-1, keepdim=True).clamp(min=1e-6)
 
-    def foward(self, x, mask=None, return_attention = False):
-        batch_size, seq_length, embed_dim = x.size()
-        qkv = self.qkv_proj(x)
+        attn_output = torch.bmm(attn_output_weights, v_proj)
 
-        qkv = qkv.reshape(batch_size, seq_length, self.num_heads, 3 * self.num_heads)
-        qkv = qkv.permute(0, 2, 1, 3)
-        q, k, v = qkv.chunk(3, dim=1)
-
-        values, attn = scaled_dot_product(q, k, v, mask = mask)
-        values = values.permute(0, 2, 1, 3)
-        values = values.reshape(batch_size, seq_length, embed_dim)
-
-        o = self.o_proj(values)
-
-        if return_attention:
-            return o, attn
+        attn_output = attn_output.transpose(0, 1)  # Change back to (tgt_len, bsz, embed_dim)
+        attn_output = F.linear(attn_output, self.out_proj_weight)
+        # attn_output = self.out_proj(attn_output)
+        
+        if need_weights:
+            # Optionally return the attention weights in addition to the output
+            return attn_output, attn_output_weights
         else:
-            return o
-class GCNmultiheadattention(nn.modules):
-    def __init__(self, input_dim, embed_dim, num_heads):
-        super.__init__()
-        assert embed_dim % num_heads == 0
+            return attn_output, None
 
-        self.embed_dim = embed_dim
-        self.num_haeds = num_heads
-        self.head_dim = embed_dim // num_heads
+class SimpleTransformerEncoderLayer(nn.TransformerEncoderLayer):
+    def __init__(self, d_model, dim_feedforward=2048, dropout=0.1,
+                 activation="relu", batch_norm=False):
+        super().__init__(d_model, nhead=1,  # nhead is set to 1 as it's unused in SimplifiedAttention
+                         dim_feedforward=dim_feedforward, dropout=dropout, activation=activation)
+        self.self_attn = SimplifiedAttention(d_model)
+        self.batch_norm = batch_norm
+        if batch_norm:
+            self.norm1 = nn.BatchNorm1d(d_model)
+            self.norm2 = nn.BatchNorm1d(d_model)
+        self.scaling = None
 
-        self.qkv_proj = 
-
-class EncoderBlock(nn.Module):
-    def __init__(self, input_dim, num_heads, dim_feedforward, dropout=0.0):
-        super().__init__()
-
-        #atttntion
-        self.self_attn = multiheadattention(input_dim, input_dim, num_heads)
-
-        #Two-layer MLP
-        self.linear_net = nn.Sequential(
-            nn.Linear(input_dim, dim_feedforward),
-            nn.Dropout(dropout),
-            nn.ReLU(inplace=True),
-            nn.Linear(dim_feedforward, input_dim),
-        )
-        #layer norm dropout
-        self.norm1 = nn.LayerNorm(input_dim)
-        self.norm2 = nn.LayerNorm(input_dim)
-        self.dropout = nn.Dropout(dropout)
-
-    def feedforward(self, x, mask):
-        attn_out = self.self_attn(x, mask=mask)
-
-        x = x + self.dropout(attn_out)
-        x = self.nor1(x)
-
-        linear_out = self.linear_net(x)
-        x = x + self.dropout(linear_out)
-        x = self.norm2
-
-        return x
-
-
-class TransformerEncoder(nn.module):
-    def __init__(self, num_layers, **block_args):
-        super().__init__()
-        self.layers = nn.ModuleList([EncoderBlock(**block_args) for _ in range(num_layers)])
-
-        def forward(self, x, mask=None):
-            for layer in self.layers:
-                x = layer(x, mask=mask)
-            return x
+    def forward(self, src, pe, src_mask=None, src_key_padding_mask=None):
+        src2, attn = self.self_attn(src, pe, key_padding_mask = src_key_padding_mask, need_weights=False)
         
-
-class GCNConv(MessagePassing):
-    def __init__(self, in_channel, out_channel):
-        super().__init__(aggr='add')
+        # print(src_key_padding_mask)
+        src = src + self.dropout1(src2)
         
-        self.mlp = nn.Sequential(
-            nn.Linear(2*in_channel, out_channel),
-            nn.ReLU(),
-            nn.Linear(out_channel, out_channel)
-        )
-
-    def feedforward(self, x, edge_index):
-        output = self.propagate(edge_index, x=x)
-        return output
-
-    def message(self, x_i, x_j):
-        tmp = torch.cat([x_i, x_j - x_i], dim=1)
-        out = self.mlp(tmp)
-        return out
-
-class GCN(GCNConv):
-    def __init__(self, hiddenchanel):
-        super(GCN, self).__init__()
-        torch.manual_seed(12345)        
+        if self.batch_norm:
+            bsz = src.shape[1]
+            src = src.view(-1, src.shape[-1])
+        src = self.norm1(src)
+        # print(self.norm1)
+        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
+        src = src + self.dropout2(src2)
+        src = self.norm2(src)
+        if self.batch_norm:
+            src = src.view(-1, bsz, src.shape[-1])
+        
+        return src
