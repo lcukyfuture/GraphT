@@ -25,7 +25,6 @@ from data_idx import SubgraphDataset, GraphDataset
 from utils import compute_kernel_for_batch, save_kernel, load_kernel, count_parameters
 import pickle
 
-
 def load_args():
     parser = argparse.ArgumentParser(description='Graph Kernel Transformer Training', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -60,14 +59,11 @@ def load_args():
         outdir = outdir + '/{}_{}_{}_{}_{}_{}_{}'.format(args.kernel, args.wl, args.num_layers, args.hop, args.dropout, args.lr, args.batch_size)
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-
-        
+     
         args.outdir = outdir
-
     return args
-
+    
 device = torch.device('cuda')
-
 
 def train(loader, model, criterion, optimizer): 
     model.train()
@@ -79,11 +75,9 @@ def train(loader, model, criterion, optimizer):
 
     gradients = {}
     for i, (data, mask, pe, labels) in enumerate(loader):
-        #####pe is the kernel matrix
-        
+        # pe is the kernel matrix
         labels = labels.view(-1)
         
-
         data = data.to(device)
         mask = mask.to(device)
         pe = pe.to(device)
@@ -92,14 +86,10 @@ def train(loader, model, criterion, optimizer):
         #add kernel to model
 
         out = model(data, mask, pe)
-
-
         loss = criterion(out, label)
 
- 
         loss.backward()
         optimizer.step()
-
 
         train_pred = out.data.argmax(dim=1)
         total_loss += loss.item()*len(data)
@@ -112,11 +102,8 @@ def train(loader, model, criterion, optimizer):
     n_samples = len(loader.dataset)
     train_avg_loss = total_loss / n_samples
     train_avg_corr = train_corr / n_samples
-
-
     return train_avg_loss, train_avg_corr, epoch_time
-
-
+    
 def val(loader, model, criterion):
     model.eval()
     val_loss = 0
@@ -171,11 +158,8 @@ def plot_curve(train_loss_list, test_loss_list, train_acc_list, test_acc_list, f
     # plt.savefig(f'{args.kernel}{args.num_layers}layer{args.hop}hops{args.dropout}dropout_figs/curves_fold_{fold}.png')
     plt.savefig(os.path.join(args.outdir, f'curves_fold_{fold}.png'))
     plt.show()
-
-
+    
 global args
-
-
 
 def main():
     
@@ -206,7 +190,6 @@ def main():
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['Epoch', 'Train Loss', 'Train Accuracy', 'Test Loss', 'Test Accuracy', 'Best Epoch','Best Accuracy'])
 
-
     idx_path = 'new_folds/{}/inner_folds/{}-{}-{}.txt'
     test_idx_path = 'new_folds/{}/test_idx-{}.txt'
     inner_idx = 1
@@ -217,7 +200,6 @@ def main():
         idx_path.format(args.dataset, 'val_idx', args.fold, inner_idx)).astype(int)).long()
     test_fold_idx = torch.from_numpy(np.loadtxt(
         test_idx_path.format(args.dataset, args.fold)).astype(int)).long()
-
 
     if not os.path.exists("cache/pe/{}".format(args.dataset)):
         try:
@@ -240,9 +222,7 @@ def main():
             Subgraph_kernel = compute_kernel_for_batch(data, device, args.wl)
             Subgraph_kernels.extend(Subgraph_kernel)
         save_kernel(Subgraph_kernels, kernel_cache_path)
-
-
-    
+   
     train_fold_idx = train_fold_idx.tolist()
     val_fold_idx = val_fold_idx.tolist()
     test_fold_idx = test_fold_idx.tolist()
@@ -263,12 +243,10 @@ def main():
 
     print(train_dataset.pe_list[0])
 
-
     best_acc = 0
     best_epoch = 9999
     input_size = dataset.num_node_features
     nb_class = dataset.num_classes
-
 
     model = GraphTransformer(in_size=input_size,
                             nb_class=nb_class,
@@ -286,7 +264,6 @@ def main():
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
  
-
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
     best_loss = float('inf')
     patience_counter = 0
