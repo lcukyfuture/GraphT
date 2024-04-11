@@ -66,7 +66,6 @@ def compute_kernel_for_batch(batch_data, device, iteration=3):
     # print(sub_kernels[0])
     return sub_kernels
 
-
 def save_kernel(kernel, cache_path):
     if not os.path.exists(os.path.dirname(cache_path)):
         os.makedirs(os.path.dirname(cache_path))
@@ -80,12 +79,8 @@ def load_kernel(cache_path):
         kernel = pickle.load(f)
     return kernel
 
-    
-
 def count_parameters(model):
     return sum([p.numel() for p in model.parameters() if p.requires_grad])
-
-
 
 class KernelCacheControl:
     def __init__(self, cache_dir, hop, wl):
@@ -123,7 +118,6 @@ class KernelCacheControl:
             kernel = self.kernel_cache.get(graph_idx, None)
             kernels.append(kernel)
         return kernels
-
 
 def lambda_lr_schedule(epoch):
     warmup_epochs = 10
