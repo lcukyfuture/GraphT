@@ -1,4 +1,3 @@
-
 import os
 os.environ["PATH"] = os.environ["PATH"]+":/usr/local/cuda/bin/"
 import torch
@@ -7,7 +6,6 @@ import torch.nn.functional as F
 from einops import rearrange
 import sys
 sys.path.append('./src')
-
 
 import torch
 import torch.nn as nn
@@ -39,8 +37,6 @@ class SimplifiedAttention(nn.Module):
         v_proj = F.linear(value, self.in_proj_weight)
         v_proj = v_proj.transpose(0, 1)  # Change shape to (bsz, tgt_len, embed_dim)
         
-        
-
         # # Apply key padding mask
         # if key_padding_mask is not None:
         #     attn_output_weights = attn_output_weights.view(bsz, 1, tgt_len,
@@ -95,6 +91,5 @@ class SimpleTransformerEncoderLayer(nn.TransformerEncoderLayer):
         src = src + self.dropout2(src2)
         src = self.norm2(src)
         if self.batch_norm:
-            src = src.view(-1, bsz, src.shape[-1])
-        
+            src = src.view(-1, bsz, src.shape[-1])    
         return src
