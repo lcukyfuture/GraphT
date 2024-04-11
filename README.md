@@ -14,7 +14,7 @@ matplotlib
 ```
 
 
-## Run expetiments
+## Run experiments
 ```bash
 
 python Classification.py --dataset MUTAG --kernel WL_GPU --hop 2 --wl 3 --outdir MUTAG
