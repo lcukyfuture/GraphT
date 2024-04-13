@@ -173,7 +173,7 @@ def main():
     # dataset = datasets.TUDataset(data_path, dataset_name)
     
     if args.dataset == 'IMDB-BINARY':
-        transform = OneHotDegree(max_degree=540)
+        transform = OneHotDegree(max_degree=135)
         dataset = datasets.TUDataset(root=data_path, name='IMDB-BINARY', transform=transform)
     else:
         dataset = datasets.TUDataset(data_path, dataset_name)
