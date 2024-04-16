@@ -98,6 +98,9 @@ class GraphDataset(object):
         self.n_features = dataset[0].x.shape[-1]
         self.pe_list = None
 
+    def pad_all(self):
+        pass
+        
     def __len__(self):
         return len(self.dataset)
 
@@ -140,3 +143,35 @@ class GraphDataset(object):
 
             return padded_x, mask, pos_enc, default_collate(labels)
         return collate
+
+
+class GraphDataset(object):
+    def __init__(self, dataset):
+        """a pytorch geometric dataset as input
+        """
+        self.dataset = [g for g in dataset]
+        self.n_features = dataset[0].x.shape[-1]
+        self.pe_list = None
+
+        
+    def pad_all(self):
+        max_len = max([len(g.x) for g in self.dataset])
+        for i,g in enumerate(self.dataset):
+            g.x = torch.nn.functional.pad(g.x, (0, 0, 0, max_len - g.x.size(0)))
+            g.mask = torch.nn.functional.pad(torch.zeros(g.x.size(0),dtype=torch.bool), (0, max_len - g.x.size(0)),value=True)
+            if self.pe_list is not None and len(self.pe_list) == len(self.dataset):
+                g.pe = torch.nn.functional.pad(self.pe_list[i], (0, max_len - self.pe_list[i].size(0), 0, max_len - self.pe_list[i].size(0)))
+        
+    
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        g = self.dataset[index]
+        # if self.pe_list is not None and len(self.pe_list) == len(self.dataset):
+        #     data.pe = self.pe_list[index]
+        return g.x, g.mask, g.pe, g.y
+
+    def collate_fn(self):
+         return default_collate
+

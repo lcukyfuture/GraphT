@@ -1,7 +1,7 @@
 import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+# os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
 import torch
 
 import torch.nn as nn
@@ -28,7 +28,7 @@ import pickle
 def load_args():
     parser = argparse.ArgumentParser(description='Graph Kernel Transformer Training', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--dataset', type=str, default='MUTAG', choices=['MUTAG', 'PATTERN', 'PROTEINS','NCI1', 'PTC_MR', 'ogbg-molhiv', 'IMDB-BINARY'],
+    parser.add_argument('--dataset', type=str, default='PROTEINS', choices=['MUTAG', 'PATTERN', 'PROTEINS','NCI1', 'PTC_MR', 'ogbg-molhiv', 'IMDB-BINARY'],
                         help='Dataset to use')
     parser.add_argument('--num-layers', type=int, default=3, help="number of layers")
     parser.add_argument('--hop', type=int, default=2, help='Hop for subgraph extraction')
@@ -41,7 +41,7 @@ def load_args():
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=32, help='training batch_size')
     parser.add_argument('--dropout', type=float, default=0, help='drop out rate')
-    parser.add_argument('--outdir', type=str, default='',help='output path')
+    parser.add_argument('--outdir', type=str, default='./',help='output path')
     parser.add_argument('--wl', type=int, default=3, help='WL_GPU iteration')
     parser.add_argument('--batch-norm', action='store_true', help='use batch norm instead of layer norm')
     args = parser.parse_args()
@@ -228,14 +228,18 @@ def main():
     test_fold_idx = test_fold_idx.tolist()
     train_dataset = GraphDataset(dataset[train_fold_idx])
     
-    print(len(train_dataset))
-    print(train_dataset[0])
+    # print(len(train_dataset))
+    # print(train_dataset[0])
     val_dataset = GraphDataset(dataset[val_fold_idx])
     test_dataset = GraphDataset(dataset[test_fold_idx])
     
     train_dataset.pe_list = [Subgraph_kernels[i] for i in train_fold_idx]
     val_dataset.pe_list = [Subgraph_kernels[i] for i in val_fold_idx]
     test_dataset.pe_list = [Subgraph_kernels[i] for i in test_fold_idx]
+
+    train_dataset.pad_all()
+    val_dataset.pad_all()
+    test_dataset.pad_all()
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=train_dataset.collate_fn())
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=val_dataset.collate_fn())
