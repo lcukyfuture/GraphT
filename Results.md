@@ -81,7 +81,7 @@ For 32 batch size 3 layers 1 head attention
 For 3 layers 1 head attention
 | Method/Dataset | MUTAG | PTC | PROTEINS | NCI1 |AIDS|IMDB-BINARY|
 | :-----:| :------: | :------: | :----: | :---:|:---:|:---:|
-| Ours_new |79810|80514 |79554|81730 |81794 |88066|
+| Ours_new |67522|68226 |67266|69442 |69506 |75778|
 | GraphiT + diffusion|104386|105090|104130|106306|106370|112642|
 | GraphiT + adj |104386|105090|104130|106306|106370|112642|
 |GraphiT + GCKN|111362|112066|111106|113282|113346|119618|
