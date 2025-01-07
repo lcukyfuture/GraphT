@@ -160,7 +160,6 @@ class SimplifiedAttention_V3(nn.Module):
         attn_output = torch.einsum("bhij,bhjd->bhid", attn_output_weights, v_proj)  # (bsz, num_heads, tgt_len, head_dim)
 
         head_weights = F.softmax(self.head_weights, dim=0)
-        print(head_weights)  
         attn_output = (attn_output * head_weights.view(1, -1, 1, 1)).sum(dim=1)  # (bsz, tgt_len, head_dim)
 
         attn_output = attn_output.permute(1, 0, 2)  # (tgt_len, bsz, embed_dim)
