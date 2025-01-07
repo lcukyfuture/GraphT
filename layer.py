@@ -172,66 +172,6 @@ class SimplifiedAttention_V3(nn.Module):
         else:
             return attn_output, None
 
-class SimplifiedAttention_V4(nn.Module):
-    def __init__(self, embed_dim, dropout_p=0.0, num_heads=1):
-        super(SimplifiedAttention_V4, self).__init__()
-        self.embed_dim = embed_dim
-        self.dropout_p = dropout_p
-        self.num_heads = num_heads
-
-        self.in_proj_weight = nn.Parameter(torch.Tensor(num_heads*embed_dim, embed_dim))
-        # self.in_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
-        self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
-        # self.out_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
-        # self.in_proj = nn.Linear(in_features=embed_dim, out_features=num_heads*embed_dim,bias=False)
-        # self.out_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
-        self.head_weights = nn.ParameterList(
-            [nn.Parameter(torch.Tensor(embed_dim, embed_dim)) for _ in range(num_heads)]
-        )
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.in_proj_weight)
-        # nn.init.constant_(self.in_proj_bias, 0)
-        nn.init.xavier_uniform_(self.out_proj_weight)
-        # nn.init.constant_(self.out_proj_bias, 0)
-        for weight in self.head_weights:
-            nn.init.xavier_uniform_(weight)
-
-    def forward(self, value, attn_output_weights, key_padding_mask=None, need_weights=None):
-        tgt_len, bsz, embed_dim = value.size()
-        # assert embed_dim == self.embed_dim, "Embedding dimension mismatch."
-        # assert attn_output_weights.size(1) == self.num_heads
-
-  
-        v_proj = F.linear(value, self.in_proj_weight).view(tgt_len, bsz, self.num_heads, -1)
-        v_proj = v_proj.permute(1, 2, 0, 3)
-
-
-        attn_output = torch.einsum("bhij,bhjd->bhid", attn_output_weights, v_proj)
-
-
-
-        weighted_heads = []
-        for i in range(self.num_heads):
-            weighted_head = torch.matmul(attn_output[:, i, :, :], self.head_weights[i]) 
-            weighted_heads.append(weighted_head)
-
-        combined = sum(weighted_heads)  # (bsz, tgt_len, embed_dim)
-
-        combined = combined.permute(1, 0, 2)  # (tgt_len, bsz, embed_dim)
-        attn_output = F.linear(combined, self.out_proj_weight)
-
-
-        # attn_output = attn_output.transpose(0, 1)  # Change back to (tgt_len, bsz, embed_dim)
-        # attn_output = F.linear(attn_output, self.out_proj_weight)
-        # attn_output = self.out_proj(attn_output)
-        
-        if need_weights:
-            # Optionally return the attention weights in addition to the output
-            return attn_output, attn_output_weights
-        else:
-            return attn_output, None
         
 
 class DiffTransformerEncoderLayer(nn.TransformerEncoderLayer):
