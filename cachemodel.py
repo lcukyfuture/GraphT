@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch_geometric.nn as gnn
-from cachelayer import DiffTransformerEncoderLayer
+from layer import DiffTransformerEncoderLayer
 from einops import repeat
 from scipy.cluster.vq import kmeans2
 #k-means clustering to extract features from vectors each layer with more layers. 
