@@ -25,6 +25,8 @@ import copy
 from data_idx import SubgraphDataset, GraphDataset
 from utils import compute_kernel_for_batch, save_kernel, load_kernel, count_parameters, compute_kernel_CPU, LapEncoding
 import pickle
+import wandb
+import seaborn as sns
 
 
 def load_args():
@@ -32,7 +34,7 @@ def load_args():
 
     parser.add_argument('--dataset', type=str, default='MUTAG', choices=['MUTAG', 'PATTERN', 'PROTEINS','NCI1', 'PTC_MR', 'ogbg-molhiv', 'IMDB-BINARY'],
                         help='Dataset to use')
-    parser.add_argument('--num-layers', type=int, default=3, help="number of layers")
+    parser.add_argument('--num-layers', type=int, default=1, help="number of layers")
     parser.add_argument('--hop', type=int, default=2, help='Hop for subgraph extraction')
     parser.add_argument('--numheads', type=int, default=1, help='Number of heads')
     parser.add_argument('--lappe', type=bool, default=False, help='use laplacian PE')
@@ -146,6 +148,72 @@ def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch):
 
     return train_avg_loss, train_avg_corr, epoch_time
 
+def train_V2(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch): 
+    model.train()
+    total_loss = 0.0
+    train_corr = 0.0
+    strat_time = timer()
+
+    for i, (data, mask, pe, lap, labels) in enumerate(loader):
+        labels = labels.view(-1)
+
+        data = data.to(device)
+        mask = mask.to(device)
+        pe = pe.to(device)
+        if lap is not None:
+            lap = lap.to(device)
+        label = labels.to(device)
+
+        optimizer.zero_grad()
+        out = model(data, mask, pe, lap)
+        loss = criterion(out, label)
+        loss.backward()
+        optimizer.step()
+
+        train_pred = out.data.argmax(dim=1)
+        total_loss += loss.item() * len(data)
+        train_corr += torch.sum(train_pred == label).item()
+
+    end_time = timer()
+    epoch_time = end_time - strat_time
+    n_samples = len(loader.dataset)
+    train_avg_loss = total_loss / n_samples
+    train_avg_corr = train_corr / n_samples
+
+    # wandb.log({
+    #     "epoch": epoch,
+    #     "embedding_weights": wandb.Histogram(model.embedding.weight.cpu().detach().numpy()),
+    #     # "fc2_weights": wandb.Histogram(model.fc2.weight.detach().numpy()),
+    #     # "loss": loss.item()
+    # })
+
+
+    # 每 10 个 epoch 记录一次权重
+    # if epoch % 10 == 0:
+    #     for layer in model.encoder.layers:
+    #         if hasattr(layer.self_attn, "out_proj_weight"):
+    #             weight = layer.self_attn.out_proj_weight.detach().cpu().numpy()
+    #             wandb.log({
+    #                 f"out_proj_weight_epoch_{epoch}": wandb.Image(
+    #                     sns.heatmap(weight, cmap="viridis", cbar=True).get_figure()
+    #                 )
+    #             })
+    #             plt.close()
+    # if epoch % 10 == 0:
+    #     for layer in model.encoder.layers:
+    #         if hasattr(layer.self_attn, "head_weights"):
+    #             weight = layer.self_attn.head_weights.detach().cpu().numpy()
+    #             if len(weight.shape) == 1:
+    #                 weight = weight.reshape(1, -1)
+    #             wandb.log({
+    #                 f"out_proj_weight_epoch_{epoch}": wandb.Image(
+    #                     sns.heatmap(weight, cmap="viridis", cbar=True).get_figure()
+    #                 )
+    #             })
+    #             plt.close()
+
+    return train_avg_loss, train_avg_corr, epoch_time
+
 
 def val(loader, model, criterion):
     model.eval()
@@ -215,6 +283,11 @@ def main():
     args = load_args()
     torch.manual_seed(44)
     np.random.seed(44)
+    # wandb.init(
+    #     project="Graph-Transformer",
+    #     name=f"{args.dataset}_Fold_{args.fold}",
+    #     config=vars(args)
+    # )
     data_path = '../dataset/TUDataset'
     dataset_name = args.dataset
     # torch.use_deterministic_algorithms(True)
@@ -277,7 +350,7 @@ def main():
                 Subgraph_kernels.extend(Subgraph_kernel)
             save_kernel(Subgraph_kernels, kernel_cache_path)
         all_kernel_results.append(Subgraph_kernels)
-        all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
+    all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
 
     
     # else:
@@ -397,9 +470,16 @@ def main():
 
         print(f'Epoch: {epoch}/{args.epochs}, LR: {optimizer.param_groups[0]["lr"]}')
         # train_loss, train_acc, epoch_time = train(train_dataloader, model, warm_up, criterion, optimizer, warmup_lr_scheduler, epoch)
-        train_loss, train_acc, epoch_time = train(train_loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
+        train_loss, train_acc, epoch_time = train_V2(train_loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
         epoch_time_list.append(epoch_time)
         val_loss, val_acc = val(val_loader, model, criterion)
+        # wandb.log({
+        #     "epoch": epoch,
+        #     "train_loss": train_loss,
+        #     "val_loss": val_loss,
+        #     "train_acc": train_acc,
+        #     "val_acc": val_acc,
+        # })
         lr_scheduler.step()
         if val_loss < best_loss:
             best_loss = val_loss
