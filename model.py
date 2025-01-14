@@ -4,7 +4,6 @@ import torch_geometric.nn as gnn
 from cachelayer import DiffTransformerEncoderLayer
 from einops import repeat
 from scipy.cluster.vq import kmeans2
-#k-means clustering to extract features from vectors each layer with more layers. 
 from timeit import default_timer as timer
 import wandb
 import seaborn as sns
@@ -53,16 +52,6 @@ class GraphTransformer(nn.Module):
             nn.Linear(d_model, nb_class)
             )
 
-    # def log_weight_heatmap(self):
-    #     for layer in self.encoder.layers:
-    #         if hasattr(layer.self_attn, "out_proj_weight"):
-    #             weight = layer.self_attn.out_proj_weight.detach().cpu().numpy()
-    #             plt.figure(figsize=(6, 6))
-    #             sns.heatmap(weight, cmap="viridis", cbar=True)
-    #             plt.title(f"Iterations")
-    #             plt.savefig("temp_weight_heatmap.png")  
-    #             wandb.log({f"out_proj_weight_iteration_{self.iteration}": wandb.Image("temp_weight_heatmap.png")})
-    #             plt.close()
     def forward(self, x, masks, pe, lap_pe=None):
         # We permute the batch and sequence following pytorch
         # Transformer convention
@@ -77,9 +66,7 @@ class GraphTransformer(nn.Module):
         output = output.permute(1, 0, 2)
         # we make sure to correctly take the masks into account when pooling
         output = self.pooling(output, masks)
-        # et = timer()
-        # print(et-st)
-        # we only do mean pooling for now.
+    
         return self.classifier(output)
 
 
