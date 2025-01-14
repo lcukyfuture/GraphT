@@ -29,6 +29,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class SimplifiedAttention(nn.Module):
+    # Simplified version of the attention module
     def __init__(self, embed_dim, dropout_p=0.0, num_heads=1):
         super(SimplifiedAttention, self).__init__()
         self.embed_dim = embed_dim
@@ -39,8 +40,6 @@ class SimplifiedAttention(nn.Module):
         # self.in_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
         self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
         # self.out_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
-        # self.in_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
-        # self.out_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -63,15 +62,10 @@ class SimplifiedAttention(nn.Module):
         # # ## v_proj = F.linear(value, self.in_proj_weight)
         # v_proj = v_proj.transpose(0, 1)  # Change shape to (bsz, tgt_len, embed_dim)
         # attn_output_weights = attn_output_weights / attn_output_weights.sum(dim=-1, keepdim=True).clamp(min=1e-6)
-        # # print(attn_output_weights[0])
-        # attn_output = torch.bmm(attn_output_weights, v_proj)
+
         attn_output = attn_output.permute(2, 0, 1, 3).reshape(tgt_len, bsz, embed_dim)
         attn_output = F.linear(attn_output, self.out_proj_weight)
 
-
-        # attn_output = attn_output.transpose(0, 1)  # Change back to (tgt_len, bsz, embed_dim)
-        # attn_output = F.linear(attn_output, self.out_proj_weight)
-        # attn_output = self.out_proj(attn_output)
         
         if need_weights:
             # Optionally return the attention weights in addition to the output
@@ -83,6 +77,7 @@ class SimplifiedAttention(nn.Module):
 
 
 class SimplifiedAttention_V2(nn.Module):
+    # Luca's way of combining attention heads (concat + linear projection)
     def __init__(self, embed_dim, dropout_p=0.0, num_heads=1):
         super(SimplifiedAttention_V2, self).__init__()
         self.embed_dim = embed_dim
@@ -93,8 +88,6 @@ class SimplifiedAttention_V2(nn.Module):
         # self.in_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
         self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, num_heads*embed_dim))
         # self.out_proj_bias = nn.Parameter(torch.Tensor(embed_dim))
-        # self.in_proj = nn.Linear(in_features=embed_dim, out_features=num_heads*embed_dim,bias=False)
-        # self.out_proj = nn.Linear(in_features=embed_dim, out_features=embed_dim,bias=False)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -105,9 +98,6 @@ class SimplifiedAttention_V2(nn.Module):
 
     def forward(self, value, attn_output_weights, key_padding_mask=None, need_weights=None):
         tgt_len, bsz, embed_dim = value.size()
-        # assert embed_dim == self.embed_dim, "Embedding dimension mismatch."
-        # assert attn_output_weights.size(1) == self.num_heads
-
   
         v_proj = F.linear(value, self.in_proj_weight).view(tgt_len, bsz, self.num_heads, -1)
         v_proj = v_proj.permute(1, 2, 0, 3)
@@ -115,19 +105,10 @@ class SimplifiedAttention_V2(nn.Module):
 
         attn_output = torch.einsum("bhij,bhjd->bhid", attn_output_weights, v_proj)
 
-
-        # # ## v_proj = F.linear(value, self.in_proj_weight)
-        # v_proj = v_proj.transpose(0, 1)  # Change shape to (bsz, tgt_len, embed_dim)
-        # attn_output_weights = attn_output_weights / attn_output_weights.sum(dim=-1, keepdim=True).clamp(min=1e-6)
-        # # print(attn_output_weights[0])
-        # attn_output = torch.bmm(attn_output_weights, v_proj)
         attn_output = attn_output.permute(2, 0, 1, 3).reshape(tgt_len, bsz, -1)
         attn_output = F.linear(attn_output, self.out_proj_weight)
 
 
-        # attn_output = attn_output.transpose(0, 1)  # Change back to (tgt_len, bsz, embed_dim)
-        # attn_output = F.linear(attn_output, self.out_proj_weight)
-        # attn_output = self.out_proj(attn_output)
         
         if need_weights:
             # Optionally return the attention weights in addition to the output
@@ -136,6 +117,7 @@ class SimplifiedAttention_V2(nn.Module):
             return attn_output, None
         
 class SimplifiedAttention_V3(nn.Module):
+    # Weighted(learned) sum of attention heads (weighted + sum)
     def __init__(self, embed_dim, dropout_p=0.0, num_heads=1):
         super(SimplifiedAttention_V3, self).__init__()
         self.embed_dim = embed_dim
@@ -143,35 +125,49 @@ class SimplifiedAttention_V3(nn.Module):
         self.num_heads = num_heads
 
         self.in_proj_weight = nn.Parameter(torch.Tensor(num_heads * embed_dim, embed_dim))
-        self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))  
-        self.head_weights = nn.Parameter(torch.ones(num_heads)) 
+        self.in_proj_bias = nn.Parameter(torch.Tensor(num_heads * embed_dim))  # Bias for input projection
+        
+        self.out_proj_weight = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        self.out_proj_bias = nn.Parameter(torch.Tensor(embed_dim))  # Bias for output projection
+
+        self.head_weights = nn.Parameter(torch.ones(num_heads))
         self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.in_proj_weight)
+        nn.init.constant_(self.in_proj_bias, 0)  # Initialize bias to zero
         nn.init.xavier_uniform_(self.out_proj_weight)
-        nn.init.constant_(self.head_weights, 1.0 / self.num_heads)  # inialize head weights to uniform
+        nn.init.constant_(self.out_proj_bias, 0)  # Initialize bias to zero
+        if self.num_heads == 2: 
+            self.head_weights.data = torch.tensor([0.5, 0.5], device=self.head_weights.device)
+        else:
+            nn.init.constant_(self.head_weights, 1.0 / self.num_heads)  # inialize head weights to uniform
 
     def forward(self, value, attn_output_weights, key_padding_mask=None, need_weights=None):
         tgt_len, bsz, embed_dim = value.size()
-        v_proj = F.linear(value, self.in_proj_weight).view(tgt_len, bsz, self.num_heads, -1)
+
+        v_proj = F.linear(value, self.in_proj_weight, self.in_proj_bias).view(tgt_len, bsz, self.num_heads, -1)
         v_proj = v_proj.permute(1, 2, 0, 3)  # (bsz, num_heads, tgt_len, head_dim)
+        if self.num_heads >= 2:
+            v_proj = torch.cat([v_proj[:, 1:2], v_proj[:, 0:1], v_proj[:, 2:]], dim=1)
 
         attn_output = torch.einsum("bhij,bhjd->bhid", attn_output_weights, v_proj)  # (bsz, num_heads, tgt_len, head_dim)
 
-        head_weights = F.softmax(self.head_weights, dim=0)
+        head_weights = F.softplus(self.head_weights)
+        # head_weights = self.head_weights
+        print(head_weights)
         attn_output = (attn_output * head_weights.view(1, -1, 1, 1)).sum(dim=1)  # (bsz, tgt_len, head_dim)
+        # attn_output = F.normalize(attn_output, p=2, dim=-1)
+        
 
         attn_output = attn_output.permute(1, 0, 2)  # (tgt_len, bsz, embed_dim)
 
-        attn_output = F.linear(attn_output, self.out_proj_weight)
+        attn_output = F.linear(attn_output, self.out_proj_weight, self.out_proj_bias)
 
         if need_weights:
             return attn_output, attn_output_weights
         else:
             return attn_output, None
-
-        
 
 class DiffTransformerEncoderLayer(nn.TransformerEncoderLayer):
     def __init__(self, d_model, dim_feedforward=2048, dropout=0.1,
