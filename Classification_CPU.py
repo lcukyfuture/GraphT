@@ -206,8 +206,8 @@ def train_V2(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch):
     #             if len(weight.shape) == 1:
     #                 weight = weight.reshape(1, -1)
     #             wandb.log({
-    #                 f"out_proj_weight_epoch_{epoch}": wandb.Image(
-    #                     sns.heatmap(weight, cmap="viridis", cbar=True).get_figure()
+    #                 f"head_weight_epoch_{epoch}": wandb.Image(
+    #                     sns.heatmap(weight, cmap="viridis", cbar=True, vmin=-0.7, vmax=1).get_figure()
     #                 )
     #             })
     #             plt.close()
@@ -285,7 +285,7 @@ def main():
     np.random.seed(44)
     # wandb.init(
     #     project="Graph-Transformer",
-    #     name=f"{args.dataset}_Fold_{args.fold}",
+    #     name=f"{args.dataset}_Fold_{args.fold}_softplus",
     #     config=vars(args)
     # )
     data_path = '../dataset/TUDataset'
@@ -339,9 +339,15 @@ def main():
         kernel_type = args.kernels[head]
         wl = args.wl if kernel_type=='WL' else None
         gl = args.GL_k if kernel_type == 'GL' else None
-        kernel_cache_path = 'cache/pe/{}/{}_{}_{}_{}.pkl'.format(
+        if kernel_type == 'WL':
+            kernel_cache_path = 'cache/pe/{}/WL_GPU_{}_{}.pkl'.format(
+                args.dataset, wl, args.hop)
+        else:
+            kernel_cache_path = 'cache/pe/{}/{}_{}_{}_{}.pkl'.format(
             args.dataset, kernel_type, wl, gl, args.hop)
         Subgraph_kernels = load_kernel(kernel_cache_path)
+        if Subgraph_kernels is not None:
+            Subgraph_kernels = [torch.tensor(k).to('cpu') for k in Subgraph_kernels]
         if Subgraph_kernels is None:
             print("compute {} kernel".format(kernel_type))
             Subgraph_kernels=[]
@@ -353,28 +359,6 @@ def main():
     all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
 
     
-    # else:
-    #     kernel_cache_path = 'cache/pe/{}/{}_{}_{}.pkl'.format(
-    #         args.dataset, args.kernel, args.wl, args.hop)
-    #     Subgraph_kernels = load_kernel(kernel_cache_path)
-
-    # if Subgraph_kernels is None:
-    #     Subgraph_kernels = []
-    #     if args.kernel == 'WL_GPU':
-    #         SubdDataset = SubgraphDataset(dataset, k_hop = args.hop)
-    #         print("Length of dataset:", len(dataset))
-    #         print("compute subgraph kernel...")
-    #         SubDataloader = PyGDataLoader(SubdDataset, batch_size=1, shuffle=False)
-    #         for data in SubDataloader:
-    #             Subgraph_kernel = compute_kernel_for_batch(data, device, args.wl)
-    #             Subgraph_kernels.extend(Subgraph_kernel)
-    # else:
-    #     for data in dataset: 
-    #         Subgraph_kernel = compute_kernel_CPU(data, args.kernel, args.hop, args.wl)
-    #         Subgraph_kernels.extend(Subgraph_kernel)
-    # save_kernel(Subgraph_kernels, kernel_cache_path)
-
-    # print('subgraph kernel:',Subgraph_kernel)
     train_fold_idx = train_fold_idx.tolist()
     val_fold_idx = val_fold_idx.tolist()
     test_fold_idx = test_fold_idx.tolist()
@@ -385,18 +369,9 @@ def main():
     val_dataset = GraphDataset(dataset[val_fold_idx], nb_heads=args.numheads)
     test_dataset = GraphDataset(dataset[test_fold_idx], nb_heads=args.numheads)
     
-    # train_dataset.pe_list = [Subgraph_kernels[i] for i in train_fold_idx]
-    # val_dataset.pe_list = [Subgraph_kernels[i] for i in val_fold_idx]
-    # test_dataset.pe_list = [Subgraph_kernels[i] for i in test_fold_idx]
-    # train_dataset.pe_list = [all_kernel_results[i] for i in train_fold_idx]
-    # val_dataset.pe_list = [all_kernel_results[i] for i in val_fold_idx]
-    # test_dataset.pe_list = [all_kernel_results[i] for i in test_fold_idx]
     print(len(all_kernel_results))
-    if args.numheads == 1:
-        train_dataset.pe_list = [torch.tensor(all_kernel_results[i]) for i in train_fold_idx]
-        val_dataset.pe_list = [torch.tensor(all_kernel_results[i]) for i in val_fold_idx]
-        test_dataset.pe_list = [torch.tensor(all_kernel_results[i]) for i in test_fold_idx]
-
+    print(all_kernel_results[0])
+    
     train_dataset.pe_list = [torch.stack([torch.tensor(head) for head in all_kernel_results[i]]) for i in train_fold_idx]
     val_dataset.pe_list = [torch.stack([torch.tensor(head) for head in all_kernel_results[i]]) for i in val_fold_idx]
     test_dataset.pe_list = [torch.stack([torch.tensor(head) for head in all_kernel_results[i]]) for i in test_fold_idx]
@@ -444,7 +419,28 @@ def main():
     # print(model.parameters)
     warm_up = 100
     weight_decay = 1e-4
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr , weight_decay = weight_decay)
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr , weight_decay = weight_decay)
+    
+
+    all_params = list(model.parameters())
+
+    head_weights_params = []
+    for layer in model.encoder.layers:
+        if hasattr(layer.self_attn, 'head_weights'):
+            head_weights_params.append(layer.self_attn.head_weights)
+
+    other_params = [p for p in all_params if id(p) not in [id(h) for h in head_weights_params]]
+
+    params = [
+        {"params": other_params}, 
+        {"params": head_weights_params, "lr": args.lr*100 }  
+    ]
+    optimizer = torch.optim.AdamW(params, lr=args.lr, weight_decay=weight_decay)
+
+    for group in optimizer.param_groups:
+        print(f"Learning rate: {group['lr']}, Number of params: {len(group['params'])}")
+
+
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 50)
