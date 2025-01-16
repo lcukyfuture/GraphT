@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch_geometric.nn as gnn
-from cachelayer import DiffTransformerEncoderLayer
+from layer import DiffTransformerEncoderLayer
 from einops import repeat
 from scipy.cluster.vq import kmeans2
 from timeit import default_timer as timer
