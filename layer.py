@@ -175,7 +175,10 @@ class DiffTransformerEncoderLayer(nn.TransformerEncoderLayer):
         super().__init__(d_model, nhead=nb_heads,  # nhead is set to 1 as it's unused in SimplifiedAttention
                          dim_feedforward=dim_feedforward, dropout=dropout, activation=activation)
         self.n_heads = nb_heads
+       
         self.self_attn = SimplifiedAttention_V3(d_model, num_heads=self.n_heads)
+        self.self_attn.batch_first = False  
+        self.self_attn._qkv_same_embed_dim = True  
         self.batch_norm = batch_norm
         if batch_norm:
             self.norm1 = nn.BatchNorm1d(d_model)
