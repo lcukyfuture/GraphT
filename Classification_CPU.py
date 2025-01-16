@@ -11,7 +11,7 @@ from torch_geometric.loader import DataLoader as PyGDataLoader
 from torch.utils.data import DataLoader
 from torch_geometric import datasets
 import torch.nn.functional as F
-from cachemodel import GraphTransformer
+from model import GraphTransformer
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 import numpy as np
@@ -180,37 +180,6 @@ def train_V2(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch):
     train_avg_loss = total_loss / n_samples
     train_avg_corr = train_corr / n_samples
 
-    # wandb.log({
-    #     "epoch": epoch,
-    #     "embedding_weights": wandb.Histogram(model.embedding.weight.cpu().detach().numpy()),
-    #     # "fc2_weights": wandb.Histogram(model.fc2.weight.detach().numpy()),
-    #     # "loss": loss.item()
-    # })
-
-
-    # 每 10 个 epoch 记录一次权重
-    # if epoch % 10 == 0:
-    #     for layer in model.encoder.layers:
-    #         if hasattr(layer.self_attn, "out_proj_weight"):
-    #             weight = layer.self_attn.out_proj_weight.detach().cpu().numpy()
-    #             wandb.log({
-    #                 f"out_proj_weight_epoch_{epoch}": wandb.Image(
-    #                     sns.heatmap(weight, cmap="viridis", cbar=True).get_figure()
-    #                 )
-    #             })
-    #             plt.close()
-    # if epoch % 10 == 0:
-    #     for layer in model.encoder.layers:
-    #         if hasattr(layer.self_attn, "head_weights"):
-    #             weight = layer.self_attn.head_weights.detach().cpu().numpy()
-    #             if len(weight.shape) == 1:
-    #                 weight = weight.reshape(1, -1)
-    #             wandb.log({
-    #                 f"head_weight_epoch_{epoch}": wandb.Image(
-    #                     sns.heatmap(weight, cmap="viridis", cbar=True, vmin=-0.7, vmax=1).get_figure()
-    #                 )
-    #             })
-    #             plt.close()
 
     return train_avg_loss, train_avg_corr, epoch_time
 
@@ -283,11 +252,6 @@ def main():
     args = load_args()
     torch.manual_seed(44)
     np.random.seed(44)
-    # wandb.init(
-    #     project="Graph-Transformer",
-    #     name=f"{args.dataset}_Fold_{args.fold}_softplus",
-    #     config=vars(args)
-    # )
     data_path = '../dataset/TUDataset'
     dataset_name = args.dataset
     # torch.use_deterministic_algorithms(True)
@@ -334,28 +298,65 @@ def main():
             pass
     
    
+    # all_kernel_results = []
+    # for head in range(args.numheads):
+    #     kernel_type = args.kernels[head]
+    #     wl = args.wl if kernel_type=='WL' else None
+    #     gl = args.GL_k if kernel_type == 'GL' else None
+    #     if kernel_type == 'WL':
+    #         kernel_cache_path = 'cache/pe/{}/WL_GPU_{}_{}.pkl'.format(
+    #             args.dataset, wl, args.hop)
+    #     else:
+    #         kernel_cache_path = 'cache/pe/{}/{}_{}_{}_{}.pkl'.format(
+    #         args.dataset, kernel_type, wl, gl, args.hop)
+    #     Subgraph_kernels = load_kernel(kernel_cache_path)
+    #     if Subgraph_kernels is not None:
+    #         Subgraph_kernels = [torch.tensor(k).to('cpu') for k in Subgraph_kernels]
+    #     else:
+    #         print("compute {} kernel".format(kernel_type))
+    #         Subgraph_kernels=[]
+    #         for data in dataset:
+    #             Subgraph_kernel = compute_kernel_CPU(args.dataset, data, kernel_type, args.hop, wl, gl)
+    #             Subgraph_kernels.extend(Subgraph_kernel)
+    #         save_kernel(Subgraph_kernels, kernel_cache_path)
+    #     all_kernel_results.append(Subgraph_kernels)
+    # all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
     all_kernel_results = []
     for head in range(args.numheads):
         kernel_type = args.kernels[head]
-        wl = args.wl if kernel_type=='WL' else None
+        wl = args.wl if kernel_type == 'WL' else None
         gl = args.GL_k if kernel_type == 'GL' else None
+
         if kernel_type == 'WL':
             kernel_cache_path = 'cache/pe/{}/WL_GPU_{}_{}.pkl'.format(
                 args.dataset, wl, args.hop)
         else:
             kernel_cache_path = 'cache/pe/{}/{}_{}_{}_{}.pkl'.format(
-            args.dataset, kernel_type, wl, gl, args.hop)
+                args.dataset, kernel_type, wl, gl, args.hop)
+
         Subgraph_kernels = load_kernel(kernel_cache_path)
-        if Subgraph_kernels is not None:
-            Subgraph_kernels = [torch.tensor(k).to('cpu') for k in Subgraph_kernels]
+
         if Subgraph_kernels is None:
-            print("compute {} kernel".format(kernel_type))
-            Subgraph_kernels=[]
-            for data in dataset:
-                Subgraph_kernel = compute_kernel_CPU(args.dataset, data, kernel_type, args.hop, wl, gl)
-                Subgraph_kernels.extend(Subgraph_kernel)
+            print("Compute {} kernel".format(kernel_type))
+            Subgraph_kernels = []
+
+            if kernel_type == 'WL':
+                SubdDataset = SubgraphDataset(dataset, k_hop=args.hop)
+                SubDataloader = PyGDataLoader(SubdDataset, batch_size=1, shuffle=False)
+                for data in SubDataloader:
+                    Subgraph_kernel = compute_kernel_for_batch(data, device, args.wl)
+                    Subgraph_kernels.extend(Subgraph_kernel)
+            else:
+                for data in dataset:
+                    Subgraph_kernel = compute_kernel_CPU(args.dataset, data, kernel_type, args.hop, wl, gl)
+                    Subgraph_kernels.extend(Subgraph_kernel)
+
             save_kernel(Subgraph_kernels, kernel_cache_path)
+        else:
+            Subgraph_kernels = [torch.tensor(k).to('cpu') for k in Subgraph_kernels]
+
         all_kernel_results.append(Subgraph_kernels)
+
     all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
 
     
