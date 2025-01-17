@@ -65,11 +65,6 @@ def load_args():
         outdir = os.path.join(outdir,'fold_{}'.format(args.fold))
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        # outdir = outdir + '/{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.numheads, args.kernels[0], args.kernels[1], args.kernels[2], args.kernels[3], args.dim_hidden, args.wl, args.GL_k, args.num_layers, args.hop, args.dropout, args.lr, args.batch_size)
-        # if not os.path.exists(outdir):
-        #     os.makedirs(outdir)        
-        # args.outdir = outdir
-                # Adjust file name based on number of heads and kernels
 
 
         ### new 12/10 2024
@@ -82,71 +77,6 @@ def load_args():
     return args
 
 device = torch.device('cuda')
-
-
-def train(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch): 
-    model.train()
-    total_loss = 0.0
-    train_corr = 0.0
-    strat_time = timer()
-    mid_time = 0
-    # with profiler.profile(use_cuda=True) as prof:
-
-    for i, (data, mask, pe, lap, labels) in enumerate(loader):
-        # print("loadertime:", timer() - strat_time)
-        labels = labels.view(-1)
-        
-        # print('data:',data.shape)
-        # print('mask:',mask.shape)
-        # print('pe:', pe.shape)
-
-        # mid_time = timer()
-        # print("xxxxx", mid_time-strat_time)
-
-
-        # iteration = epoch * len(loader) + i
-        # for param in optimizer.param_groups:
-        #     param["lr"] = lr_scheduler(iteration)
-
-        data = data.to(device)
-        mask = mask.to(device)
-        pe = pe.to(device)
-        if lap is not None:
-            lap = lap.to(device)
-        label = labels.to(device)
-        optimizer.zero_grad()
-        #add kernel to model
-
-        out = model(data, mask, pe, lap)
-
-
-        loss = criterion(out, label)
-
-
-        # mid_1 = timer() 
-        loss.backward()
-        
-        optimizer.step()
-        # mid_2 = timer()
-
-        # mid_time += (mid_2-mid_1)
-
-
-
-        train_pred = out.data.argmax(dim=1)
-        total_loss += loss.item()*len(data)
-        train_corr += torch.sum(train_pred==label).item()
-    # print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
-
-    # print("mid time:", mid_time)
-    end_time = timer()
-    epoch_time = end_time - strat_time
-    n_samples = len(loader.dataset)
-    train_avg_loss = total_loss / n_samples
-    train_avg_corr = train_corr / n_samples
-
-
-    return train_avg_loss, train_avg_corr, epoch_time
 
 def train_V2(loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch): 
     model.train()
@@ -271,7 +201,6 @@ def main():
     val_acc_list = []
     train_loss_list = []
     val_loss_list = []
-    # csv_file = open(f'{args.kernel}{args.num_layers}layer{args.hop}hops{args.dropout}dropout_figs/{args.kernel}{args.num_layers}layer{args.hop}hops_results.csv', 'w', newline='')
     csv_file = open(args.outdir + '/results.csv', 'w', newline='')
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['Epoch', 'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'Best Epoch','Best Accuracy'])
@@ -298,29 +227,6 @@ def main():
             pass
     
    
-    # all_kernel_results = []
-    # for head in range(args.numheads):
-    #     kernel_type = args.kernels[head]
-    #     wl = args.wl if kernel_type=='WL' else None
-    #     gl = args.GL_k if kernel_type == 'GL' else None
-    #     if kernel_type == 'WL':
-    #         kernel_cache_path = 'cache/pe/{}/WL_GPU_{}_{}.pkl'.format(
-    #             args.dataset, wl, args.hop)
-    #     else:
-    #         kernel_cache_path = 'cache/pe/{}/{}_{}_{}_{}.pkl'.format(
-    #         args.dataset, kernel_type, wl, gl, args.hop)
-    #     Subgraph_kernels = load_kernel(kernel_cache_path)
-    #     if Subgraph_kernels is not None:
-    #         Subgraph_kernels = [torch.tensor(k).to('cpu') for k in Subgraph_kernels]
-    #     else:
-    #         print("compute {} kernel".format(kernel_type))
-    #         Subgraph_kernels=[]
-    #         for data in dataset:
-    #             Subgraph_kernel = compute_kernel_CPU(args.dataset, data, kernel_type, args.hop, wl, gl)
-    #             Subgraph_kernels.extend(Subgraph_kernel)
-    #         save_kernel(Subgraph_kernels, kernel_cache_path)
-    #     all_kernel_results.append(Subgraph_kernels)
-    # all_kernel_results = [list(head_kernels) for head_kernels in zip(*all_kernel_results)]
     all_kernel_results = []
     for head in range(args.numheads):
         kernel_type = args.kernels[head]
@@ -397,9 +303,6 @@ def main():
     nb_class = dataset.num_classes
 
 
-    # train_dataset = dataset[train_fold_idx]
-    # val_dataset = dataset[val_fold_idx]
-    # test_dataset = dataset[test_fold_idx]
     model = GraphTransformer(in_size=input_size,
                             nb_class=nb_class,
                             d_model=args.dim_hidden,
@@ -421,7 +324,6 @@ def main():
     warm_up = 100
     weight_decay = 1e-4
     # optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr , weight_decay = weight_decay)
-    
 
     all_params = list(model.parameters())
 
@@ -445,18 +347,6 @@ def main():
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 50)
-    # lr_steps = lr / (warm_up * len(train_dataloader))
-    # def warmup_lr_scheduler(s):
-    #     lr = s * lr_steps
-    #     return lr
-    # lr_steps = (args.lr - 1e-6) / args.warmup
-    # decay_factor = args.lr * args.warmup ** .5
-    # def lr_scheduler(s):
-    #     if s < args.warmup:
-    #         lr = 1e-6 + s * lr_steps
-    #     else:
-    #         lr = decay_factor * s ** -.5
-    #     return lr
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
     best_loss = float('inf')
@@ -470,13 +360,7 @@ def main():
         train_loss, train_acc, epoch_time = train_V2(train_loader, model, warm_up, criterion, optimizer, lr_scheduler, epoch)
         epoch_time_list.append(epoch_time)
         val_loss, val_acc = val(val_loader, model, criterion)
-        # wandb.log({
-        #     "epoch": epoch,
-        #     "train_loss": train_loss,
-        #     "val_loss": val_loss,
-        #     "train_acc": train_acc,
-        #     "val_acc": val_acc,
-        # })
+        
         lr_scheduler.step()
         if val_loss < best_loss:
             best_loss = val_loss
